@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Juego Salto de Esquí (Prototipo)</title>
+<style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+        background:#111;
+        color:#eee;
+        font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        min-height:100vh;
+        gap:10px;
+    }
+    canvas{
+        border:2px solid #444;
+        border-radius:8px;
+        background:linear-gradient(#99dfff,#ffffff);
+    }
+    #ui{
+        display:flex;
+        gap:20px;
+        align-items:center;
+        font-size:14px;
+    }
+    .label span{
+        font-weight:bold;
+    }
+</style>
+</head>
+<body>
+<h1>Salto de Esquí (Prototipo)</h1>
+<canvas id="game" width="800" height="450"></canvas>
+<div id="ui">
+    <div class="label">Ángulo: <span id="angleText">0°</span></div>
+    <div class="label">Tiempo en aire: <span id="timeText">0.0 s</span></div>
+    <div class="label">Estado: <span id="stateText">Preparado</span></div>
+    <div class="label">Controles: ← → mover / ↑ ↓ ángulo / ESPACIO saltar</div>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const W = canvas.width;
+const H = canvas.height;
+
+// Estado del juego
+let gameState = "ready"; // "ready" | "flying" | "landed"
+let timeAir = 0;
+
+// Esquiador
+const skier = {
+    x: W/2,
+    y: H-80,     // altura inicial
+    vy: -18,     // velocidad vertical inicial (salto)
+    angle: 0,    // en grados, 0 = neutro
+    vx: 10,      // velocidad "hacia adelante" (afecta distancia)
+};
+
+// Teclas
+const keys = {};
+window.addEventListener("keydown", (e)=>{
+    keys[e.key] = true;
+    if(e.key === " " && gameState === "ready"){
+        // iniciar salto
+        resetSkier();
+        gameState = "flying";
+        timeAir = 0;
+        document.getElementById("stateText").textContent = "En el aire";
+    }
+});
+window.addEventListener("keyup", (e)=>{
+    keys[e.key] = false;
+});
+
+function resetSkier(){
+    skier.x = W/2;
+    skier.y = H-80;
+    skier.vy = -18;
+    skier.angle = 0;
+}
+
+// Lógica física simplificada
+const gravity = 0.7;
+const optimalAngle = -10; // ángulo "bueno" para planear
+
+function update(dt){
+    if(gameState === "flying"){
+        timeAir += dt;
+        // Controles
+        if(keys["ArrowLeft"]) skier.x -= 5;
+        if(keys["ArrowRight"]) skier.x += 5;
+        if(keys["ArrowUp"]) skier.angle -= 1;
+        if(keys["ArrowDown"]) skier.angle += 1;
+
+        // Limitar ángulo y posición horizontal
+        skier.angle = Math.max(-45, Math.min(45, skier.angle));
+        skier.x = Math.max(W*0.25, Math.min(W*0.75, skier.x));
+
+        // Sustentación en función del ángulo
+        const diff = Math.abs(skier.angle - optimalAngle);
+        let lift = 0;
+        if(diff < 15){
+            lift = -0.35; // aguanta más en el aire
+        }else if(diff < 30){
+            lift = -0.15;
+        }else{
+            lift = 0.1; // cae más rápido si el ángulo es malo
+        }
+
+        // Actualizar velocidad vertical
+        skier.vy += gravity + lift;
+        skier.y += skier.vy;
+
+        // "Tocar suelo"
+        const groundY = H-50;
+        if(skier.y >= groundY){
+            skier.y = groundY;
+            gameState = "landed";
+            document.getElementById("stateText").textContent =
+                `Aterrizaje: ${timeAir.toFixed(2)} s en el aire`;
+        }
+    }
+}
+
+function drawBackground(){
+    // Cielo
+    const skyGrad = ctx.createLinearGradient(0,0,0,H);
+    skyGrad.addColorStop(0,"#9cdfff");
+    skyGrad.addColorStop(1,"#ffffff");
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0,0,W,H);
+
+    // Montañas simples
+    ctx.fillStyle = "#d0e8ff";
+    ctx.beginPath();
+    ctx.moveTo(0,H*0.6);
+    ctx.lineTo(W*0.3,H*0.3);
+    ctx.lineTo(W*0.6,H*0.6);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(W*0.4,H*0.7);
+    ctx.lineTo(W*0.8,H*0.35);
+    ctx.lineTo(W,H*0.7);
+    ctx.closePath();
+    ctx.fill();
+
+    // Pista en perspectiva (dos líneas)
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(W*0.3,H);
+    ctx.lineTo(W*0.45,H*0.3);
+    ctx.moveTo(W*0.7,H);
+    ctx.lineTo(W*0.55,H*0.3);
+    ctx.stroke();
+}
+
+function drawSkier(){
+    ctx.save();
+    ctx.translate(skier.x, skier.y);
+    ctx.rotate(skier.angle * Math.PI/180);
+
+    // Esquís
+    ctx.fillStyle = "#ff4444";
+    ctx.fillRect(-30, 10, 60, 6);
+
+    // Cuerpo
+    ctx.fillStyle = "#333";
+    ctx.fillRect(-10, -20, 20, 30);
+
+    // Cabeza
+    ctx.beginPath();
+    ctx.arc(0,-30,10,0,Math.PI*2);
+    ctx.fillStyle = "#f5d6b4";
+    ctx.fill();
+
+    // Casco
+    ctx.beginPath();
+    ctx.arc(0,-32,11,Math.PI,0);
+    ctx.fillStyle = "#0055ff";
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function drawHUD(){
+    document.getElementById("angleText").textContent = skier.angle.toFixed(0) + "°";
+    document.getElementById("timeText").textContent = timeAir.toFixed(1) + " s";
+}
+
+let lastTime = 0;
+function loop(timestamp){
+    const dt = (timestamp - lastTime)/1000;
+    lastTime = timestamp;
+
+    update(dt);
+    drawBackground();
+    drawSkier();
+    drawHUD();
+
+    requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
