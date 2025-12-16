@@ -6,13 +6,16 @@
  * - 15 números (5 por fila)
  * - Columnas por decenas:
  *   1–9, 10–19, 20–29, ... 70–79, 80–90
- * - Ordenación POR COLUMNA: mayor -> menor (arriba -> abajo)
+ * - Ordenación en cada columna: mayor -> menor (arriba->abajo)
  */
 
 const ROWS = 3;
 const COLS = 9;
 const PER_ROW = 5;
 const TOTAL = ROWS * PER_ROW;
+
+// Tu logo para los huecos:
+const EMPTY_LOGO_URL = "https://jmoyasaez.github.io/Juegos/bingo-carton/img/logo_lula_bw.jpeg";
 
 // Theme
 const THEME_KEY = "bingo_theme_v2";
@@ -28,6 +31,8 @@ const countChip = document.getElementById("countChip");
 
 let card = emptyCard();     // 3x9 con null o número
 let marked = new Set();     // números marcados
+let lastLineState = false;
+let lastBingoState = false;
 
 function emptyCard(){
   return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -57,27 +62,11 @@ function pickUnique(count, min, max, used){
   return pool.slice(0, count);
 }
 
-/** Logo SVG inline (cámbialo por el tuyo cuando quieras) */
-function logoSVG(){
-  // Un “badge” sencillo tipo ola+estrella. Puedes sustituir el path por tu logo.
-  return `
-    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
-      <path d="M32 6c9.4 0 17 7.6 17 17 0 3.6-1.1 6.9-3 9.7
-               4.8 1.6 8.3 6.1 8.3 11.3 0 6.5-5.3 11.8-11.8 11.8H21.5
-               C15 56.8 9.7 51.5 9.7 45c0-5.4 3.7-10 8.7-11.4
-               -1.7-2.7-2.7-5.9-2.7-9.3C15.7 13.6 22.6 6 32 6zm0 6.3
-               c-5.9 0-10.7 4.8-10.7 10.7 0 2.8 1.1 5.4 2.9 7.4l2.2 2.4-3.2.6
-               c-3.9.7-6.8 4.1-6.8 8.1 0 4.2 3.4 7.6 7.6 7.6h20.6
-               c4.2 0 7.6-3.4 7.6-7.6 0-3.9-2.9-7.3-6.8-8.1l-3.4-.6 2.3-2.6
-               c1.8-2 2.9-4.6 2.9-7.4 0-5.9-4.8-10.7-10.7-10.7z"/>
-      <path d="M18 44c6 4 22 4 28-2 1.4-1.4 3.6.6 2.2 2.2C41 51 23 51 16 46c-1.8-1.2.2-3.3 2-2z"/>
-    </svg>
-  `;
-}
-
 function buildNewCard(){
   card = emptyCard();
   marked.clear();
+  lastLineState = false;
+  lastBingoState = false;
 
   // 1) En cada fila: escoger 5 columnas con número
   const rowCols = [];
@@ -103,9 +92,8 @@ function buildNewCard(){
     const [min, max] = colRange(c);
     const nums = pickUnique(k, min, max, usedGlobal);
 
-    // Orden POR COLUMNA: mayor -> menor (arriba->abajo)
+    // ✅ Ordenación por columna: mayor->menor de arriba hacia abajo
     nums.sort((a,b)=>b-a);
-
     nums.forEach(n => usedGlobal.add(n));
 
     const rowsWith = [];
@@ -134,7 +122,11 @@ function render(){
 
       if (v == null){
         cell.classList.add("empty");
-        cell.innerHTML = logoSVG();
+        const img = document.createElement("img");
+        img.src = EMPTY_LOGO_URL;
+        img.alt = "";
+        img.loading = "lazy";
+        cell.appendChild(img);
       } else {
         cell.classList.add("clickable");
         cell.textContent = String(v);
@@ -197,18 +189,38 @@ function markedCount(){
   return count;
 }
 
+function pulseWin(){
+  boardEl.classList.add("winflash");
+  setTimeout(() => boardEl.classList.remove("winflash"), 450);
+}
+
 function updateStatus(){
   const line = hasLine();
   const bingo = hasBingo();
   const mc = markedCount();
 
+  // contador
   countChip.textContent = `Marcados: ${mc}/${TOTAL}`;
 
+  // chips
   lineChip.textContent = `Línea: ${line ? "SÍ" : "no"}`;
   bingoChip.textContent = `Bingo: ${bingo ? "SÍ" : "no"}`;
-
   lineChip.className = "chip " + (line ? "warn" : "ok");
   bingoChip.className = "chip " + (bingo ? "win" : "ok");
+
+  // ✅ tensión progresiva (0..1)
+  const t = mc / TOTAL;
+  boardEl.style.setProperty("--tension", String(t));
+  boardEl.classList.remove("tension-low","tension-mid","tension-high");
+
+  if (t >= 0.25 && t < 0.6) boardEl.classList.add("tension-low");
+  if (t >= 0.6  && t < 0.9) boardEl.classList.add("tension-mid");
+  if (t >= 0.9)            boardEl.classList.add("tension-high");
+
+  // flash solo cuando cambia el estado (no cada click)
+  if ((line && !lastLineState) || (bingo && !lastBingoState)) pulseWin();
+  lastLineState = line;
+  lastBingoState = bingo;
 }
 
 // Theme
