@@ -1,19 +1,23 @@
 "use strict";
 
-// --- Config ---
+// 1–90
 const MIN = 1;
 const MAX = 90;
 
-const STORAGE_KEY_DRAWN = "bingo90_drawn_numbers_v1";
+// LocalStorage keys
+const STORAGE_KEY_DRAWN = "bingo90_drawn_numbers_v1"; // lista de cantados
+const BINGO_STARTED_AT_KEY = "bingo_started_at";      // timestamp inicio partida (al reiniciar)
+
 const THEME_KEY = "bingo_theme_v2";
 const VOICE_KEY = "bingo_voice_on_v1";
 const VOICE_LANG_KEY = "bingo_voice_lang_v1";
 const VOICE_RATE_KEY = "bingo_voice_rate_v1";
 
-// --- UI ---
+// UI
 const elCurrent = document.getElementById("current");
 const elRemaining = document.getElementById("remaining");
 const elHistory = document.getElementById("history");
+const startedAtLabel = document.getElementById("startedAtLabel");
 
 const drawBtn = document.getElementById("drawBtn");
 const undoBtn = document.getElementById("undoBtn");
@@ -34,7 +38,7 @@ let pool = [];
 let drawn = [];
 let autoTimer = null;
 
-// --- Utils ---
+// Utils
 function shuffle(arr){
   for (let i = arr.length - 1; i > 0; i--){
     const j = Math.floor(Math.random() * (i + 1));
@@ -63,9 +67,20 @@ function loadJSON(key, fallback){
   }
 }
 
-function saveIfSyncOn(){
+function saveDrawn(){
   if (!syncToggle.checked) return;
   localStorage.setItem(STORAGE_KEY_DRAWN, JSON.stringify(drawn));
+}
+
+function getStartedAt(){
+  const raw = localStorage.getItem(BINGO_STARTED_AT_KEY);
+  const n = raw ? Number(raw) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
+function setStartedAt(ts){
+  localStorage.setItem(BINGO_STARTED_AT_KEY, String(ts));
+  startedAtLabel.textContent = String(ts);
 }
 
 function render(){
@@ -83,7 +98,7 @@ function render(){
   drawBtn.disabled = pool.length === 0;
 }
 
-// --- Voice ---
+// Voice
 function speechSupported(){
   return "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
 }
@@ -92,9 +107,7 @@ function speakNumber(n){
   if (!voiceToggle.checked) return;
   if (!speechSupported()) return;
 
-  // cancelar cola anterior (si auto está rápido)
   window.speechSynthesis.cancel();
-
   const u = new SpeechSynthesisUtterance(String(n));
   u.lang = voiceLang.value || "es-ES";
   u.rate = Number(voiceRate.value) || 1;
@@ -102,13 +115,13 @@ function speakNumber(n){
   try{ window.speechSynthesis.speak(u); }catch{}
 }
 
-// --- Actions ---
+// Actions
 function drawNumber(){
   if (pool.length === 0) return;
   const n = pool.pop();
   drawn.push(n);
   setCurrent(n);
-  saveIfSyncOn();
+  saveDrawn();
   render();
   speakNumber(n);
 }
@@ -119,7 +132,7 @@ function undo(){
   pool.push(last);
   shuffle(pool);
   setCurrent(drawn.length ? drawn[drawn.length - 1] : "—");
-  saveIfSyncOn();
+  saveDrawn();
   render();
 }
 
@@ -133,11 +146,13 @@ function stopAuto(){
 function startAuto(){
   const sec = Math.max(1, Math.min(10, Number(intervalInput.value) || 2));
   intervalInput.value = String(sec);
+
   if (autoTimer) return;
   autoTimer = setInterval(() => {
     if (pool.length === 0) stopAuto();
     else drawNumber();
   }, sec * 1000);
+
   autoBtn.textContent = "Stop";
 }
 
@@ -146,16 +161,26 @@ function toggleAuto(){
   else startAuto();
 }
 
+/**
+ * 🔥 REGLA CLAVE:
+ * Al REINICIAR el bombo se genera el timestamp oficial de partida.
+ */
 function resetAll(){
   stopAuto();
   initPool();
   drawn = [];
   setCurrent("—");
-  saveIfSyncOn();
+
+  const startedAt = Date.now();
+  setStartedAt(startedAt);
+
+  // limpia historial guardado
+  localStorage.setItem(STORAGE_KEY_DRAWN, JSON.stringify([]));
+
   render();
 }
 
-// --- Theme ---
+// Theme
 function getTheme(){
   const saved = localStorage.getItem(THEME_KEY);
   return (saved === "light" || saved === "dark") ? saved : "dark";
@@ -170,7 +195,7 @@ function toggleTheme(){
   setTheme(now === "dark" ? "light" : "dark");
 }
 
-// --- Persist voice settings ---
+// Voice prefs
 function loadVoicePrefs(){
   const on = localStorage.getItem(VOICE_KEY);
   if (on === "0") voiceToggle.checked = false;
@@ -189,15 +214,13 @@ function saveVoicePrefs(){
   localStorage.setItem(VOICE_RATE_KEY, String(voiceRate.value));
 }
 
-// --- Events ---
+// Events
 drawBtn.addEventListener("click", drawNumber);
 undoBtn.addEventListener("click", undo);
-resetBtn.addEventListener("click", () => {
-  resetAll();
-  localStorage.removeItem(STORAGE_KEY_DRAWN);
-});
+resetBtn.addEventListener("click", resetAll);
 
 autoBtn.addEventListener("click", toggleAuto);
+
 themeBtn.addEventListener("click", toggleTheme);
 
 voiceToggle.addEventListener("change", saveVoicePrefs);
@@ -210,20 +233,20 @@ window.addEventListener("keydown", (e) => {
   if (e.key.toLowerCase() === "z") undo();
 });
 
-// --- Boot ---
+// Boot
 (function boot(){
-  // theme
   setTheme(getTheme());
-
-  // init pool
   initPool();
 
-  // load drawn from storage (si recargas)
+  // timestamp: si no existe, créalo (para que el cartón tenga referencia inicial)
+  const startedAt = getStartedAt();
+  if (startedAt == null) setStartedAt(Date.now());
+  else startedAtLabel.textContent = String(startedAt);
+
+  // drawn (si recargas)
   const stored = loadJSON(STORAGE_KEY_DRAWN, []);
   if (Array.isArray(stored) && stored.length){
-    drawn = stored
-      .map(Number)
-      .filter(n => Number.isInteger(n) && n >= MIN && n <= MAX);
+    drawn = stored.map(Number).filter(n => Number.isInteger(n) && n >= MIN && n <= MAX);
 
     const drawnSet = new Set(drawn);
     pool = [];
@@ -237,7 +260,6 @@ window.addEventListener("keydown", (e) => {
     setCurrent("—");
   }
 
-  // voice availability
   loadVoicePrefs();
   if (!speechSupported()){
     voiceToggle.checked = false;
