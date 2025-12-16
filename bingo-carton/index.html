@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bingo — Cartón (1–49)</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div>
+        <h1>Cartón Bingo</h1>
+        <p class="sub">Genera un cartón aleatorio (1–49) y marca números. Detecta línea y bingo.</p>
+      </div>
+
+      <div class="actions">
+        <button id="newCardBtn" class="primary">Nuevo cartón</button>
+        <button id="clearMarksBtn">Limpiar marcas</button>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="row">
+        <label class="check">
+          <input type="checkbox" id="syncReadToggle" checked />
+          <span>Leer números cantados del bombo (localStorage)</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" id="autoMarkToggle" />
+          <span>Marcar automáticamente números cantados</span>
+        </label>
+      </div>
+
+      <div class="status">
+        <div class="chip" id="lastCalled">Último cantado: —</div>
+        <div class="chip ok" id="lineStatus">Línea: no</div>
+        <div class="chip ok" id="bingoStatus">Bingo: no</div>
+      </div>
+
+      <div id="grid" class="grid" aria-label="Cartón de bingo"></div>
+      <p class="hint">Click en una casilla para marcar/desmarcar. (También se resalta si fue cantada.)</p>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
