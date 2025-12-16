@@ -5,7 +5,6 @@
   --muted: #a8b3cf;
   --border: rgba(255,255,255,.10);
   --shadow: 0 12px 40px rgba(0,0,0,.35);
-
   --r: 18px;
 }
 
@@ -106,6 +105,23 @@ button.icon{
   box-shadow: var(--shadow);
 }
 
+.meta{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.meta-item{
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,.14);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+html[data-theme="light"] .meta-item{ background: rgba(255,255,255,.70); }
+.label{ display:block; font-size: 12px; color: var(--muted); }
+.value{ display:block; font-weight: 800; margin-top: 2px; }
+.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+
 .big-number{
   font-size: 86px;
   font-weight: 900;
@@ -117,9 +133,7 @@ button.icon{
   border: 1px solid var(--border);
   user-select:none;
 }
-html[data-theme="light"] .big-number{
-  background: rgba(255,255,255,.55);
-}
+html[data-theme="light"] .big-number{ background: rgba(255,255,255,.55); }
 
 .controls{
   margin-top: 12px;
@@ -146,12 +160,13 @@ html[data-theme="light"] .big-number{
   user-select:none;
 }
 
-.autoplay{
+.autoplay, .voice-controls{
   display:flex;
   align-items:center;
   gap: 10px;
   color: var(--muted);
 }
+
 .autoplay input{
   width: 72px;
   padding: 8px 10px;
@@ -160,16 +175,8 @@ html[data-theme="light"] .big-number{
   background: rgba(0,0,0,.20);
   color: var(--text);
 }
-html[data-theme="light"] .autoplay input{
-  background: rgba(255,255,255,.75);
-}
+html[data-theme="light"] .autoplay input{ background: rgba(255,255,255,.75); }
 
-.voice-controls{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  color: var(--muted);
-}
 select{
   padding: 8px 10px;
   border-radius: 10px;
@@ -177,10 +184,7 @@ select{
   background: rgba(0,0,0,.20);
   color: var(--text);
 }
-html[data-theme="light"] select{
-  background: rgba(255,255,255,.75);
-  color: var(--text);
-}
+html[data-theme="light"] select{ background: rgba(255,255,255,.75); }
 input[type="range"]{ width: 140px; }
 
 .sep{
