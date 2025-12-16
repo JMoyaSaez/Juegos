@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bingo — Bombo (1–49)</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div>
+        <h1>Bombo Bingo</h1>
+        <p class="sub">Saca números aleatorios del 1 al 49. Guarda el historial y permite reiniciar.</p>
+      </div>
+      <div class="badge">
+        <span id="remaining">49</span>
+        <small>restantes</small>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="big-number" id="current">—</div>
+
+      <div class="controls">
+        <button id="drawBtn" class="primary">Sacar número</button>
+        <button id="undoBtn">Deshacer</button>
+        <button id="resetBtn" class="danger">Reiniciar</button>
+      </div>
+
+      <div class="row">
+        <label class="check">
+          <input type="checkbox" id="syncToggle" checked />
+          <span>Sincronizar con cartón (localStorage)</span>
+        </label>
+
+        <div class="autoplay">
+          <button id="autoBtn">Auto</button>
+          <label>
+            Intervalo (s)
+            <input id="intervalInput" type="number" min="1" max="10" value="2" />
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Historial</h2>
+      <div id="history" class="history"></div>
+      <p class="hint">Tip: abre también la app del cartón en otra pestaña para ver la sincronización.</p>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
