@@ -1,44 +1,35 @@
 "use strict";
 
 /**
- * Cartón tipo bingo.es:
+ * Cartón 3x9 (bingo 90):
  * - 3 filas x 9 columnas
  * - 15 números (5 por fila)
- * - Rangos típicos por columna:
- *   c0: 1–9, c1: 10–19, ... c7: 70–79, c8: 80–90
- * - Números ordenados dentro de cada columna de arriba a abajo
+ * - Columnas por decenas:
+ *   1–9, 10–19, 20–29, ... 70–79, 80–90
+ * - Ordenación POR COLUMNA: mayor -> menor (arriba -> abajo)
  */
 
-// --- Config ---
 const ROWS = 3;
 const COLS = 9;
-const NUMBERS_PER_ROW = 5; // 5 por fila => 15 total
-const TOTAL_NUMBERS = ROWS * NUMBERS_PER_ROW;
+const PER_ROW = 5;
+const TOTAL = ROWS * PER_ROW;
 
-// Si quieres sincronizar con un bombo, pon el mismo storage key en el bombo:
-const STORAGE_KEY_CALLED = "bingo90_drawn_numbers_v1";
+// Theme
+const THEME_KEY = "bingo_theme_v2";
 
-// Tema
-const THEME_KEY = "bingo_theme_v1"; // "dark" | "light"
-
-// --- UI ---
-const gridEl = document.getElementById("grid");
-const newCardBtn = document.getElementById("newCardBtn");
-const clearMarksBtn = document.getElementById("clearMarksBtn");
-const syncReadToggle = document.getElementById("syncReadToggle");
-const autoMarkToggle = document.getElementById("autoMarkToggle");
-const lastCalledEl = document.getElementById("lastCalled");
-const lineStatusEl = document.getElementById("lineStatus");
-const bingoStatusEl = document.getElementById("bingoStatus");
+// UI
+const boardEl = document.getElementById("board");
+const newBtn = document.getElementById("newBtn");
+const clearBtn = document.getElementById("clearBtn");
 const themeBtn = document.getElementById("themeBtn");
+const lineChip = document.getElementById("lineChip");
+const bingoChip = document.getElementById("bingoChip");
+const countChip = document.getElementById("countChip");
 
-let card = makeEmptyCard();      // matriz 3x9 con null o número
-let marked = new Set();          // números marcados
-let called = new Set();          // números cantados (si sync)
-let lastCalled = null;
+let card = emptyCard();     // 3x9 con null o número
+let marked = new Set();     // números marcados
 
-// --- Helpers ---
-function makeEmptyCard(){
+function emptyCard(){
   return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
 }
 
@@ -51,47 +42,58 @@ function shuffle(arr){
 }
 
 function colRange(col){
-  // col 0: 1-9
-  // col 1: 10-19
-  // ...
-  // col 8: 80-90
   if (col === 0) return [1, 9];
   if (col === 8) return [80, 90];
   const start = col * 10;
   return [start, start + 9];
 }
 
-function pickUniqueInRange(count, min, max, usedGlobal){
+function pickUnique(count, min, max, used){
   const pool = [];
   for (let n = min; n <= max; n++){
-    if (!usedGlobal.has(n)) pool.push(n);
+    if (!used.has(n)) pool.push(n);
   }
   shuffle(pool);
   return pool.slice(0, count);
 }
 
-// --- Generación del cartón ---
+/** Logo SVG inline (cámbialo por el tuyo cuando quieras) */
+function logoSVG(){
+  // Un “badge” sencillo tipo ola+estrella. Puedes sustituir el path por tu logo.
+  return `
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M32 6c9.4 0 17 7.6 17 17 0 3.6-1.1 6.9-3 9.7
+               4.8 1.6 8.3 6.1 8.3 11.3 0 6.5-5.3 11.8-11.8 11.8H21.5
+               C15 56.8 9.7 51.5 9.7 45c0-5.4 3.7-10 8.7-11.4
+               -1.7-2.7-2.7-5.9-2.7-9.3C15.7 13.6 22.6 6 32 6zm0 6.3
+               c-5.9 0-10.7 4.8-10.7 10.7 0 2.8 1.1 5.4 2.9 7.4l2.2 2.4-3.2.6
+               c-3.9.7-6.8 4.1-6.8 8.1 0 4.2 3.4 7.6 7.6 7.6h20.6
+               c4.2 0 7.6-3.4 7.6-7.6 0-3.9-2.9-7.3-6.8-8.1l-3.4-.6 2.3-2.6
+               c1.8-2 2.9-4.6 2.9-7.4 0-5.9-4.8-10.7-10.7-10.7z"/>
+      <path d="M18 44c6 4 22 4 28-2 1.4-1.4 3.6.6 2.2 2.2C41 51 23 51 16 46c-1.8-1.2.2-3.3 2-2z"/>
+    </svg>
+  `;
+}
+
 function buildNewCard(){
-  card = makeEmptyCard();
+  card = emptyCard();
   marked.clear();
 
-  // 1) Elegimos en cada fila 5 columnas (posiciones con número)
+  // 1) En cada fila: escoger 5 columnas con número
   const rowCols = [];
   for (let r = 0; r < ROWS; r++){
     const cols = Array.from({ length: COLS }, (_, i) => i);
     shuffle(cols);
-    rowCols.push(cols.slice(0, NUMBERS_PER_ROW).sort((a,b)=>a-b));
+    rowCols.push(cols.slice(0, PER_ROW).sort((a,b)=>a-b));
   }
 
-  // 2) Contamos cuántos números habrá por columna (0..3)
+  // 2) Contar cuántos números por columna
   const colCount = Array(COLS).fill(0);
   for (let r = 0; r < ROWS; r++){
     for (const c of rowCols[r]) colCount[c]++;
   }
-  // colCount suma 15 sí o sí
 
-  // 3) Para cada columna con k>0: generamos k números del rango, únicos globalmente,
-  //    y los asignamos a las filas seleccionadas de arriba a abajo en orden ascendente
+  // 3) Generar números por columna y colocarlos en filas correspondientes
   const usedGlobal = new Set();
 
   for (let c = 0; c < COLS; c++){
@@ -99,87 +101,81 @@ function buildNewCard(){
     if (k === 0) continue;
 
     const [min, max] = colRange(c);
-    const nums = pickUniqueInRange(k, min, max, usedGlobal).sort((a,b)=>a-b);
+    const nums = pickUnique(k, min, max, usedGlobal);
+
+    // Orden POR COLUMNA: mayor -> menor (arriba->abajo)
+    nums.sort((a,b)=>b-a);
+
     nums.forEach(n => usedGlobal.add(n));
 
-    // filas que tienen número en esta columna:
-    const rowsWithThisCol = [];
+    const rowsWith = [];
     for (let r = 0; r < ROWS; r++){
-      if (rowCols[r].includes(c)) rowsWithThisCol.push(r);
+      if (rowCols[r].includes(c)) rowsWith.push(r);
     }
-    // asignar en orden ascendente a la fila superior primero
-    rowsWithThisCol.sort((a,b)=>a-b);
-    for (let i = 0; i < rowsWithThisCol.length; i++){
-      card[rowsWithThisCol[i]][c] = nums[i];
+    rowsWith.sort((a,b)=>a-b); // fila 0 arriba
+
+    for (let i = 0; i < rowsWith.length; i++){
+      card[rowsWith[i]][c] = nums[i];
     }
   }
 
   render();
-  updateWinStates();
+  updateStatus();
 }
 
-// --- Render + interacción ---
 function render(){
-  gridEl.innerHTML = "";
+  boardEl.innerHTML = "";
 
   for (let r = 0; r < ROWS; r++){
     for (let c = 0; c < COLS; c++){
-      const val = card[r][c];
+      const v = card[r][c];
       const cell = document.createElement("div");
       cell.className = "cell";
 
-      if (val == null){
+      if (v == null){
         cell.classList.add("empty");
-        cell.textContent = "";
-      }else{
+        cell.innerHTML = logoSVG();
+      } else {
         cell.classList.add("clickable");
-        cell.textContent = String(val);
-        cell.dataset.n = String(val);
-
-        if (called.has(val)) cell.classList.add("called");
-        if (marked.has(val)) cell.classList.add("marked");
-
-        cell.addEventListener("click", () => toggleMark(val));
+        cell.textContent = String(v);
+        if (marked.has(v)) cell.classList.add("marked");
+        cell.addEventListener("click", () => toggleMark(v));
       }
 
-      gridEl.appendChild(cell);
+      boardEl.appendChild(cell);
     }
   }
-
-  lastCalledEl.textContent = `Último cantado: ${lastCalled ?? "—"}`;
 }
 
 function toggleMark(n){
   if (marked.has(n)) marked.delete(n);
   else marked.add(n);
-
   render();
-  updateWinStates();
+  updateStatus();
 }
 
 function clearMarks(){
   marked.clear();
   render();
-  updateWinStates();
+  updateStatus();
 }
 
-// --- Línea / Bingo ---
 function rowNumbers(r){
   return card[r].filter(x => x != null);
 }
 
 function hasLine(){
-  // línea = una fila completa (sus 5 números marcados)
+  // Línea = alguna fila con sus 5 números marcados
   for (let r = 0; r < ROWS; r++){
     const nums = rowNumbers(r);
-    if (nums.length !== NUMBERS_PER_ROW) continue;
+    if (nums.length !== PER_ROW) continue;
     if (nums.every(n => marked.has(n))) return true;
   }
   return false;
 }
 
 function hasBingo(){
-  // bingo = 15 números marcados
+  // Bingo = 15 marcados
   let count = 0;
   for (let r = 0; r < ROWS; r++){
     for (let c = 0; c < COLS; c++){
@@ -187,79 +183,54 @@ function hasBingo(){
       if (v != null && marked.has(v)) count++;
     }
   }
-  return count === TOTAL_NUMBERS;
+  return count === TOTAL;
 }
 
-function updateWinStates(){
+function markedCount(){
+  let count = 0;
+  for (let r = 0; r < ROWS; r++){
+    for (let c = 0; c < COLS; c++){
+      const v = card[r][c];
+      if (v != null && marked.has(v)) count++;
+    }
+  }
+  return count;
+}
+
+function updateStatus(){
   const line = hasLine();
   const bingo = hasBingo();
+  const mc = markedCount();
 
-  lineStatusEl.textContent = `Línea: ${line ? "SÍ" : "no"}`;
-  bingoStatusEl.textContent = `Bingo: ${bingo ? "SÍ" : "no"}`;
+  countChip.textContent = `Marcados: ${mc}/${TOTAL}`;
 
-  lineStatusEl.className = "chip " + (line ? "warn" : "ok");
-  bingoStatusEl.className = "chip " + (bingo ? "win" : "ok");
+  lineChip.textContent = `Línea: ${line ? "SÍ" : "no"}`;
+  bingoChip.textContent = `Bingo: ${bingo ? "SÍ" : "no"}`;
+
+  lineChip.className = "chip " + (line ? "warn" : "ok");
+  bingoChip.className = "chip " + (bingo ? "win" : "ok");
 }
 
-// --- Sync opcional (leer cantados) ---
-function readCalledFromStorage(){
-  if (!syncReadToggle.checked) return;
-
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY_CALLED);
-    const arr = raw ? JSON.parse(raw) : [];
-    const clean = Array.isArray(arr)
-      ? arr.map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= 90)
-      : [];
-
-    called = new Set(clean);
-    lastCalled = clean.length ? clean[clean.length - 1] : null;
-
-    // auto-marcado: solo si el número está en el cartón
-    if (autoMarkToggle.checked && lastCalled != null){
-      // buscar si existe en el cartón
-      let exists = false;
-      for (let r = 0; r < ROWS; r++){
-        for (let c = 0; c < COLS; c++){
-          if (card[r][c] === lastCalled) { exists = true; break; }
-        }
-        if (exists) break;
-      }
-      if (exists) marked.add(lastCalled);
-    }
-
-    render();
-    updateWinStates();
-  }catch{
-    // storage corrupto -> ignorar
-  }
-}
-
-// --- Tema dark/light ---
+// Theme
 function getTheme(){
   const saved = localStorage.getItem(THEME_KEY);
   return (saved === "light" || saved === "dark") ? saved : "dark";
 }
-
 function setTheme(theme){
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem(THEME_KEY, theme);
   themeBtn.textContent = theme === "dark" ? "🌙" : "☀️";
 }
-
 function toggleTheme(){
   const now = document.documentElement.getAttribute("data-theme") || "dark";
   setTheme(now === "dark" ? "light" : "dark");
 }
 
-// --- Events ---
-newCardBtn.addEventListener("click", buildNewCard);
-clearMarksBtn.addEventListener("click", clearMarks);
+// Events
+newBtn.addEventListener("click", buildNewCard);
+clearBtn.addEventListener("click", clearMarks);
 themeBtn.addEventListener("click", toggleTheme);
 
-// Poll simple (si usas sincronización)
-setInterval(readCalledFromStorage, 400);
-
-// --- Boot ---
+// Boot
 setTheme(getTheme());
 buildNewCard();
