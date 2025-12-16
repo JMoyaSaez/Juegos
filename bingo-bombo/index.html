@@ -11,7 +11,7 @@
     <header class="top">
       <div>
         <h1>Bombo Bingo</h1>
-        <p class="sub">Saca números aleatorios. Tema dark/light + voz opcional.</p>
+        <p class="sub">1–90 · dark/light · voz opcional · timestamp de partida al reiniciar</p>
       </div>
 
       <div class="right">
@@ -25,6 +25,13 @@
     </header>
 
     <section class="panel">
+      <div class="meta">
+        <div class="meta-item">
+          <span class="label">Partida (timestamp)</span>
+          <span class="value mono" id="startedAtLabel">—</span>
+        </div>
+      </div>
+
       <div class="big-number" id="current">—</div>
 
       <div class="controls">
@@ -36,7 +43,7 @@
       <div class="row">
         <label class="check">
           <input type="checkbox" id="syncToggle" checked />
-          <span>Sincronizar con cartón (localStorage)</span>
+          <span>Guardar historial (localStorage)</span>
         </label>
 
         <div class="autoplay">
@@ -74,7 +81,7 @@
       </div>
 
       <p class="hint small" id="voiceHint">
-        Nota: la voz funciona en la mayoría de navegadores, pero puede requerir interacción previa (click).
+        Nota: algunos móviles requieren interacción (click) antes de permitir la voz.
       </p>
     </section>
 
