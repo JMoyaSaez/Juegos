@@ -1,248 +1,236 @@
 "use strict";
 
-/**
- * Cartón 3x9 (bingo 90):
- * - 3 filas x 9 columnas
- * - 15 números (5 por fila)
- * - Columnas por decenas:
- *   1–9, 10–19, 20–29, ... 70–79, 80–90
- * - Ordenación en cada columna: mayor -> menor (arriba->abajo)
- */
-
+/* =========================
+   CONFIGURACIÓN
+========================= */
 const ROWS = 3;
 const COLS = 9;
-const PER_ROW = 5;
-const TOTAL = ROWS * PER_ROW;
+const NUMBERS_PER_ROW = 5;
 
-// Tu logo para los huecos:
-const EMPTY_LOGO_URL = "https://jmoyasaez.github.io/Juegos/bingo-carton/img/logo_lula_bw.jpeg";
+// LocalStorage keys
+const CARTON_KEY = "bingo_carton_data";
+const MARKED_KEY = "bingo_carton_marked";
+const CARTON_CREATED_AT_MS_KEY = "carton_created_at_ms";
+const CARTON_CREATED_AT_HMS_KEY = "carton_created_at_hms";
 
-// Theme
-const THEME_KEY = "bingo_theme_v2";
+const BINGO_STARTED_AT_MS_KEY = "bingo_started_at_ms";
+const BINGO_STARTED_AT_HMS_KEY = "bingo_started_at_hms";
 
-// UI
-const boardEl = document.getElementById("board");
-const newBtn = document.getElementById("newBtn");
-const clearBtn = document.getElementById("clearBtn");
-const themeBtn = document.getElementById("themeBtn");
-const lineChip = document.getElementById("lineChip");
-const bingoChip = document.getElementById("bingoChip");
-const countChip = document.getElementById("countChip");
+/* =========================
+   UI
+========================= */
+const boardEl = document.querySelector(".board");
+const statusEl = document.getElementById("status");
+const createdAtLabel = document.getElementById("createdAtLabel");
 
-let card = emptyCard();     // 3x9 con null o número
-let marked = new Set();     // números marcados
-let lastLineState = false;
-let lastBingoState = false;
+/* =========================
+   ESTADO
+========================= */
+let carton = [];     // matriz 3x9 (números o null)
+let marked = new Set();
 
-function emptyCard(){
-  return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+/* =========================
+   UTILIDADES
+========================= */
+function formatHMS(ms){
+  const d = new Date(ms);
+  return [
+    String(d.getHours()).padStart(2,"0"),
+    String(d.getMinutes()).padStart(2,"0"),
+    String(d.getSeconds()).padStart(2,"0")
+  ].join(":");
 }
 
-function shuffle(arr){
-  for (let i = arr.length - 1; i > 0; i--){
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+function playBeep(freq = 440, dur = 80){
+  try{
+    const ctx = new AudioContext();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.frequency.value = freq;
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur/1000);
+    setTimeout(() => ctx.close(), dur + 50);
+  }catch{}
+}
+
+function vibrate(ms = 15){
+  if (navigator.vibrate) navigator.vibrate(ms);
+}
+
+/* =========================
+   TIMESTAMPS
+========================= */
+function getBingoStartedAtMs(){
+  return Number(localStorage.getItem(BINGO_STARTED_AT_MS_KEY) || 0);
+}
+
+function isCartonValid(){
+  const created = Number(localStorage.getItem(CARTON_CREATED_AT_MS_KEY) || 0);
+  const bingoStart = getBingoStartedAtMs();
+  return created > 0 && bingoStart > 0 && created < bingoStart;
+}
+
+/* =========================
+   GENERACIÓN CARTÓN
+========================= */
+function generateCarton(){
+  // Inicializa vacío
+  carton = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+
+  for (let row = 0; row < ROWS; row++){
+    // Elegir 5 columnas distintas
+    const cols = [...Array(COLS).keys()]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, NUMBERS_PER_ROW);
+
+    cols.forEach(col => {
+      const min = col === 0 ? 1 : col * 10;
+      const max = col === 8 ? 90 : col * 10 + 9;
+      carton[row][col] = Math.floor(Math.random() * (max - min + 1)) + min;
+    });
   }
-  return arr;
-}
 
-function colRange(col){
-  if (col === 0) return [1, 9];
-  if (col === 8) return [80, 90];
-  const start = col * 10;
-  return [start, start + 9];
-}
-
-function pickUnique(count, min, max, used){
-  const pool = [];
-  for (let n = min; n <= max; n++){
-    if (!used.has(n)) pool.push(n);
+  // Ordenar cada columna de menor → mayor (arriba → abajo)
+  for (let col = 0; col < COLS; col++){
+    const nums = [];
+    for (let row = 0; row < ROWS; row++){
+      if (carton[row][col] !== null) nums.push(carton[row][col]);
+    }
+    nums.sort((a,b) => a - b);
+    let i = 0;
+    for (let row = 0; row < ROWS; row++){
+      if (carton[row][col] !== null){
+        carton[row][col] = nums[i++];
+      }
+    }
   }
-  shuffle(pool);
-  return pool.slice(0, count);
-}
 
-function buildNewCard(){
-  card = emptyCard();
+  // Timestamp cartón
+  const now = Date.now();
+  localStorage.setItem(CARTON_CREATED_AT_MS_KEY, now);
+  localStorage.setItem(CARTON_CREATED_AT_HMS_KEY, formatHMS(now));
+
   marked.clear();
-  lastLineState = false;
-  lastBingoState = false;
+  saveState();
+}
 
-  // 1) En cada fila: escoger 5 columnas con número
-  const rowCols = [];
-  for (let r = 0; r < ROWS; r++){
-    const cols = Array.from({ length: COLS }, (_, i) => i);
-    shuffle(cols);
-    rowCols.push(cols.slice(0, PER_ROW).sort((a,b)=>a-b));
+/* =========================
+   PERSISTENCIA
+========================= */
+function saveState(){
+  localStorage.setItem(CARTON_KEY, JSON.stringify(carton));
+  localStorage.setItem(MARKED_KEY, JSON.stringify([...marked]));
+}
+
+function loadState(){
+  const c = localStorage.getItem(CARTON_KEY);
+  const m = localStorage.getItem(MARKED_KEY);
+  if (c){
+    carton = JSON.parse(c);
+    marked = new Set(m ? JSON.parse(m) : []);
+    return true;
   }
+  return false;
+}
 
-  // 2) Contar cuántos números por columna
-  const colCount = Array(COLS).fill(0);
-  for (let r = 0; r < ROWS; r++){
-    for (const c of rowCols[r]) colCount[c]++;
-  }
-
-  // 3) Generar números por columna y colocarlos en filas correspondientes
-  const usedGlobal = new Set();
-
-  for (let c = 0; c < COLS; c++){
-    const k = colCount[c];
-    if (k === 0) continue;
-
-    const [min, max] = colRange(c);
-    const nums = pickUnique(k, min, max, usedGlobal);
-
-    // ✅ Ordenación por columna: mayor->menor de arriba hacia abajo
-    nums.sort((a,b)=>b-a);
-    nums.forEach(n => usedGlobal.add(n));
-
-    const rowsWith = [];
-    for (let r = 0; r < ROWS; r++){
-      if (rowCols[r].includes(c)) rowsWith.push(r);
-    }
-    rowsWith.sort((a,b)=>a-b); // fila 0 arriba
-
-    for (let i = 0; i < rowsWith.length; i++){
-      card[rowsWith[i]][c] = nums[i];
-    }
-  }
-
-  render();
-  updateStatus();
+/* =========================
+   RENDER
+========================= */
+function updateTension(){
+  const hits = marked.size;
+  const progress = hits / 15;
+  const hue = 220 - Math.min(220, progress * 220); // azul → rojo
+  boardEl.style.setProperty("--hit-hue", hue);
 }
 
 function render(){
   boardEl.innerHTML = "";
 
-  for (let r = 0; r < ROWS; r++){
-    for (let c = 0; c < COLS; c++){
-      const v = card[r][c];
-      const cell = document.createElement("div");
-      cell.className = "cell";
-
-      if (v == null){
-        cell.classList.add("empty");
-        const img = document.createElement("img");
-        img.src = EMPTY_LOGO_URL;
-        img.alt = "";
-        img.loading = "lazy";
-        cell.appendChild(img);
+  carton.forEach((row, r) => {
+    row.forEach((cell, c) => {
+      const div = document.createElement("div");
+      div.className = "cell";
+      if (cell === null){
+        div.classList.add("empty");
       } else {
-        cell.classList.add("clickable");
-        cell.textContent = String(v);
-        if (marked.has(v)) cell.classList.add("marked");
-        cell.addEventListener("click", () => toggleMark(v));
+        div.textContent = cell;
+        if (marked.has(cell)) div.classList.add("marked");
+        div.onclick = () => toggleMark(cell, div);
       }
+      boardEl.appendChild(div);
+    });
+  });
 
-      boardEl.appendChild(cell);
-    }
-  }
-}
-
-function toggleMark(n){
-  if (marked.has(n)) marked.delete(n);
-  else marked.add(n);
-  render();
+  updateTension();
   updateStatus();
 }
 
-function clearMarks(){
-  marked.clear();
-  render();
+/* =========================
+   INTERACCIÓN
+========================= */
+function toggleMark(n, el){
+  if (marked.has(n)){
+    marked.delete(n);
+  } else {
+    marked.add(n);
+    playBeep(600);
+    if (marked.size >= 12) vibrate(20);
+  }
+  el.classList.toggle("marked");
+  saveState();
+  updateTension();
   updateStatus();
 }
 
-function rowNumbers(r){
-  return card[r].filter(x => x != null);
-}
-
-function hasLine(){
-  // Línea = alguna fila con sus 5 números marcados
-  for (let r = 0; r < ROWS; r++){
-    const nums = rowNumbers(r);
-    if (nums.length !== PER_ROW) continue;
-    if (nums.every(n => marked.has(n))) return true;
-  }
-  return false;
-}
-
-function hasBingo(){
-  // Bingo = 15 marcados
-  let count = 0;
-  for (let r = 0; r < ROWS; r++){
-    for (let c = 0; c < COLS; c++){
-      const v = card[r][c];
-      if (v != null && marked.has(v)) count++;
-    }
-  }
-  return count === TOTAL;
-}
-
-function markedCount(){
-  let count = 0;
-  for (let r = 0; r < ROWS; r++){
-    for (let c = 0; c < COLS; c++){
-      const v = card[r][c];
-      if (v != null && marked.has(v)) count++;
-    }
-  }
-  return count;
-}
-
-function pulseWin(){
-  boardEl.classList.add("winflash");
-  setTimeout(() => boardEl.classList.remove("winflash"), 450);
-}
-
+/* =========================
+   LÍNEA / BINGO
+========================= */
 function updateStatus(){
-  const line = hasLine();
-  const bingo = hasBingo();
-  const mc = markedCount();
+  const valid = isCartonValid();
+  let line = false;
 
-  // contador
-  countChip.textContent = `Marcados: ${mc}/${TOTAL}`;
+  for (let r = 0; r < ROWS; r++){
+    const nums = carton[r].filter(n => n !== null);
+    if (nums.every(n => marked.has(n))) line = true;
+  }
 
-  // chips
-  lineChip.textContent = `Línea: ${line ? "SÍ" : "no"}`;
-  bingoChip.textContent = `Bingo: ${bingo ? "SÍ" : "no"}`;
-  lineChip.className = "chip " + (line ? "warn" : "ok");
-  bingoChip.className = "chip " + (bingo ? "win" : "ok");
+  if (!valid){
+    statusEl.textContent = "❌ Cartón no válido (hora posterior al bombo)";
+    statusEl.className = "invalid";
+    return;
+  }
 
-  // ✅ tensión progresiva (0..1)
-  const t = mc / TOTAL;
-  boardEl.style.setProperty("--tension", String(t));
-  boardEl.classList.remove("tension-low","tension-mid","tension-high");
-
-  if (t >= 0.25 && t < 0.6) boardEl.classList.add("tension-low");
-  if (t >= 0.6  && t < 0.9) boardEl.classList.add("tension-mid");
-  if (t >= 0.9)            boardEl.classList.add("tension-high");
-
-  // flash solo cuando cambia el estado (no cada click)
-  if ((line && !lastLineState) || (bingo && !lastBingoState)) pulseWin();
-  lastLineState = line;
-  lastBingoState = bingo;
+  if (marked.size === 15){
+    statusEl.textContent = "🎉 BINGO";
+    statusEl.className = "bingo";
+    playBeep(900, 200);
+    vibrate(60);
+  } else if (line){
+    statusEl.textContent = "✔ Línea";
+    statusEl.className = "line";
+  } else {
+    statusEl.textContent = "—";
+    statusEl.className = "";
+  }
 }
 
-// Theme
-function getTheme(){
-  const saved = localStorage.getItem(THEME_KEY);
-  return (saved === "light" || saved === "dark") ? saved : "dark";
-}
-function setTheme(theme){
-  document.documentElement.setAttribute("data-theme", theme);
-  localStorage.setItem(THEME_KEY, theme);
-  themeBtn.textContent = theme === "dark" ? "🌙" : "☀️";
-}
-function toggleTheme(){
-  const now = document.documentElement.getAttribute("data-theme") || "dark";
-  setTheme(now === "dark" ? "light" : "dark");
-}
+/* =========================
+   INIT
+========================= */
+(function init(){
+  // Hora del cartón
+  const hms = localStorage.getItem(CARTON_CREATED_AT_HMS_KEY);
+  if (hms) createdAtLabel.textContent = hms;
 
-// Events
-newBtn.addEventListener("click", buildNewCard);
-clearBtn.addEventListener("click", clearMarks);
-themeBtn.addEventListener("click", toggleTheme);
+  // Cargar o crear
+  if (!loadState()){
+    generateCarton();
+  }
 
-// Boot
-setTheme(getTheme());
-buildNewCard();
+  createdAtLabel.textContent =
+    localStorage.getItem(CARTON_CREATED_AT_HMS_KEY);
+
+  render();
+})();
