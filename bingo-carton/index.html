@@ -2,53 +2,38 @@
 <html lang="es" data-theme="dark">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bingo — Cartón 3x9 (15 números)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Cartón Bingo 3×9</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <main class="wrap">
-    <header class="top">
-      <div>
-        <h1>Cartón Bingo (3×9)</h1>
-        <p class="sub">15 números (5 por fila). Marca y detecta línea/bingo. Tema dark/light.</p>
+  <main class="app" role="application" aria-label="Cartón de bingo 3 por 9">
+    <header class="topbar">
+      <div class="title">
+        <h1>Cartón Bingo</h1>
+        <p>3×9 · 15 números · columnas por decenas</p>
       </div>
 
-      <div class="right">
-        <button id="themeBtn" class="ghost" aria-label="Cambiar tema">🌙</button>
-        <button id="newCardBtn" class="primary">Nuevo cartón</button>
-        <button id="clearMarksBtn">Limpiar marcas</button>
+      <div class="actions">
+        <button id="themeBtn" class="icon" aria-label="Cambiar tema">🌙</button>
+        <button id="newBtn" class="primary">Nuevo</button>
+        <button id="clearBtn">Limpiar</button>
       </div>
     </header>
 
-    <section class="panel">
-      <div class="row">
-        <label class="check">
-          <input type="checkbox" id="syncReadToggle" />
-          <span>Leer números cantados (localStorage)</span>
-        </label>
-
-        <label class="check">
-          <input type="checkbox" id="autoMarkToggle" />
-          <span>Marcar automáticamente los cantados</span>
-        </label>
-      </div>
-
-      <div class="status">
-        <div class="chip" id="lastCalled">Último cantado: —</div>
-        <div class="chip ok" id="lineStatus">Línea: no</div>
-        <div class="chip ok" id="bingoStatus">Bingo: no</div>
-      </div>
-
-      <div class="grid" id="grid" aria-label="Cartón de bingo 3 por 9"></div>
-
-      <p class="hint">
-        Click en un número para marcar/desmarcar. Las casillas vacías no se pueden marcar.
-      </p>
-      <p class="hint small">
-        Nota: este cartón usa rangos típicos por columna (1–9, 10–19, …, 80–90) y ordena números por columna.
-      </p>
+    <section class="status" aria-live="polite">
+      <div class="chip ok" id="lineChip">Línea: no</div>
+      <div class="chip ok" id="bingoChip">Bingo: no</div>
+      <div class="chip" id="countChip">Marcados: 0/15</div>
     </section>
+
+    <section class="board-wrap">
+      <div class="board" id="board" aria-label="Rejilla del cartón"></div>
+    </section>
+
+    <footer class="hint">
+      Toca un número para marcar. Las casillas con logo son huecos.
+    </footer>
   </main>
 
   <script src="./app.js"></script>
