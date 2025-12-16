@@ -1,6 +1,6 @@
 :root{
   --bg: #0b0f18;
-  --card: rgba(255,255,255,.06);
+  --panel: rgba(255,255,255,.06);
   --text: #e8eefc;
   --muted: #a8b3cf;
   --border: rgba(255,255,255,.10);
@@ -8,29 +8,39 @@
 
   --cell: rgba(0,0,0,.18);
   --cellHover: rgba(255,255,255,.08);
+
   --markedBg: rgba(86,130,255,.22);
   --markedBorder: rgba(86,130,255,.45);
 
+  --logoTint: rgba(255,255,255,.55);
   --r: 18px;
 }
 
 html[data-theme="light"]{
   --bg: #f6f7fb;
-  --card: rgba(0,0,0,.04);
+  --panel: rgba(0,0,0,.04);
   --text: #111827;
   --muted: #4b5563;
-  --border: rgba(0,0,0,.10);
-  --shadow: 0 12px 40px rgba(0,0,0,.10);
+  --border: rgba(0,0,0,.12);
+  --shadow: 0 10px 30px rgba(0,0,0,.10);
 
   --cell: rgba(0,0,0,.04);
   --cellHover: rgba(0,0,0,.06);
+
   --markedBg: rgba(59,130,246,.18);
   --markedBorder: rgba(59,130,246,.35);
+
+  --logoTint: rgba(17,24,39,.35);
 }
 
 *{ box-sizing: border-box; }
+html, body{
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* 🔒 sin scroll en móvil */
+}
+
 body{
-  margin:0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial;
   background:
     radial-gradient(1000px 600px at 20% 10%, rgba(86,130,255,.18), transparent),
@@ -39,48 +49,51 @@ body{
   color: var(--text);
 }
 
-.wrap{
+.app{
+  height: 100dvh; /* ocupa pantalla real móvil */
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+           max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 10px;
   max-width: 980px;
   margin: 0 auto;
-  padding: 24px;
-  display: grid;
-  gap: 16px;
 }
 
-.top{
+.topbar{
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-h1{ margin:0; font-size: 28px; }
-.sub{ margin: 6px 0 0; color: var(--muted); }
-
-.right{
-  display:flex;
   gap: 10px;
-  align-items:center;
 }
 
-.panel{
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 16px;
-  box-shadow: var(--shadow);
+.title h1{
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.1;
+}
+.title p{
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.actions{
+  display:flex;
+  gap: 8px;
+  align-items:center;
 }
 
 button{
   border: 1px solid var(--border);
   background: rgba(255,255,255,.06);
   color: var(--text);
-  padding: 10px 14px;
+  padding: 10px 12px;
   border-radius: 12px;
   cursor:pointer;
-  font-weight: 650;
+  font-weight: 700;
 }
+html[data-theme="light"] button{ background: rgba(255,255,255,.75); }
 button:hover{ background: rgba(255,255,255,.10); }
 html[data-theme="light"] button:hover{ background: rgba(0,0,0,.05); }
 button:active{ transform: translateY(1px); }
@@ -91,33 +104,16 @@ button.primary{
 }
 button.primary:hover{ background: rgba(86,130,255,.35); }
 
-button.ghost{
+button.icon{
   width: 44px;
   padding: 10px 0;
-  border-radius: 12px;
+  text-align:center;
   font-size: 18px;
 }
 
-.row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.check{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  color: var(--muted);
-  user-select:none;
-}
-
 .status{
-  margin-top: 12px;
   display:flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -125,66 +121,58 @@ button.ghost{
   border: 1px solid var(--border);
   background: rgba(0,0,0,.18);
   border-radius: 999px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   color: var(--muted);
+  font-size: 13px;
 }
 html[data-theme="light"] .chip{ background: rgba(255,255,255,.75); }
 .chip.ok{ color: #2dd4bf; }
 html[data-theme="light"] .chip.ok{ color: #0f766e; }
-
 .chip.warn{ color: #fbbf24; }
 html[data-theme="light"] .chip.warn{ color: #b45309; }
-
 .chip.win{ color: #60a5fa; border-color: rgba(96,165,250,.35); }
 html[data-theme="light"] .chip.win{ color: #1d4ed8; }
 
-.grid{
-  margin-top: 14px;
-  display:grid;
+.board-wrap{
+  min-height: 0; /* clave para que el grid “quepa” sin desbordar */
+  display:flex;
+}
+
+.board{
+  width: 100%;
+  height: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 10px;
+
+  display: grid;
   grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(3, 1fr);
   gap: 10px;
 }
 
-/* Casilla (3 filas x 9 columnas) */
+/* celda */
 .cell{
-  aspect-ratio: 1 / 1;
   border-radius: 14px;
   border: 1px solid var(--border);
   background: var(--cell);
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size: 18px;
-  font-weight: 800;
-  position: relative;
+  font-weight: 900;
+  font-size: clamp(14px, 3.6vw, 22px);
   user-select:none;
-  transition: transform .06s ease, background .12s ease;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
 }
 
-/* Vacía */
-.cell.empty{
-  background: transparent;
-  border-style: dashed;
-  opacity: .55;
-}
-
-/* Clickable */
-.cell.clickable{
-  cursor:pointer;
-}
+.cell.clickable{ cursor:pointer; }
 .cell.clickable:hover{ background: var(--cellHover); }
 .cell.clickable:active{ transform: translateY(1px); }
 
-/* Cantada (si sincronizas) */
-.cell.called{
-  outline: 2px solid rgba(255,255,255,.22);
-  outline-offset: 2px;
-}
-html[data-theme="light"] .cell.called{
-  outline: 2px solid rgba(0,0,0,.18);
-}
-
-/* Marcada */
 .cell.marked{
   background: var(--markedBg);
   border-color: var(--markedBorder);
@@ -198,5 +186,22 @@ html[data-theme="light"] .cell.called{
   opacity: .9;
 }
 
-.hint{ color: var(--muted); margin: 10px 0 0; }
-.hint.small{ font-size: 13px; }
+/* hueco con logo */
+.cell.empty{
+  background: transparent;
+  border-style: dashed;
+  opacity: .9;
+}
+.cell.empty .logo{
+  width: 62%;
+  height: 62%;
+  opacity: .95;
+  fill: var(--logoTint);
+}
+
+.hint{
+  color: var(--muted);
+  font-size: 12px;
+  text-align:center;
+  padding-bottom: env(safe-area-inset-bottom);
+}
