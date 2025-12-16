@@ -12,7 +12,6 @@
   --markedBg: rgba(86,130,255,.22);
   --markedBorder: rgba(86,130,255,.45);
 
-  --logoTint: rgba(255,255,255,.55);
   --r: 18px;
 }
 
@@ -29,15 +28,13 @@ html[data-theme="light"]{
 
   --markedBg: rgba(59,130,246,.18);
   --markedBorder: rgba(59,130,246,.35);
-
-  --logoTint: rgba(17,24,39,.35);
 }
 
 *{ box-sizing: border-box; }
 html, body{
   height: 100%;
   margin: 0;
-  overflow: hidden; /* 🔒 sin scroll en móvil */
+  overflow: hidden; /* ✅ sin scroll en móvil */
 }
 
 body{
@@ -50,7 +47,7 @@ body{
 }
 
 .app{
-  height: 100dvh; /* ocupa pantalla real móvil */
+  height: 100dvh; /* ✅ ocupa pantalla real móvil */
   padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
            max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   display: grid;
@@ -134,7 +131,7 @@ html[data-theme="light"] .chip.warn{ color: #b45309; }
 html[data-theme="light"] .chip.win{ color: #1d4ed8; }
 
 .board-wrap{
-  min-height: 0; /* clave para que el grid “quepa” sin desbordar */
+  min-height: 0; /* ✅ clave para que no desborde */
   display:flex;
 }
 
@@ -151,9 +148,12 @@ html[data-theme="light"] .chip.win{ color: #1d4ed8; }
   grid-template-columns: repeat(9, 1fr);
   grid-template-rows: repeat(3, 1fr);
   gap: 10px;
+
+  --tension: 0; /* 0..1 */
+  transform-origin: center;
 }
 
-/* celda */
+/* --- células --- */
 .cell{
   border-radius: 14px;
   border: 1px solid var(--border);
@@ -173,9 +173,23 @@ html[data-theme="light"] .chip.win{ color: #1d4ed8; }
 .cell.clickable:hover{ background: var(--cellHover); }
 .cell.clickable:active{ transform: translateY(1px); }
 
+/* --- animación al marcar --- */
+@keyframes pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.10); }
+  70%  { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+@keyframes glow {
+  0%   { box-shadow: 0 0 0 rgba(0,0,0,0); }
+  50%  { box-shadow: 0 0 22px rgba(86,130,255,.35); }
+  100% { box-shadow: 0 0 0 rgba(0,0,0,0); }
+}
+
 .cell.marked{
   background: var(--markedBg);
   border-color: var(--markedBorder);
+  animation: pop 180ms ease-out, glow 300ms ease-out;
 }
 .cell.marked::after{
   content: "✓";
@@ -186,18 +200,53 @@ html[data-theme="light"] .chip.win{ color: #1d4ed8; }
   opacity: .9;
 }
 
-/* hueco con logo */
+/* --- huecos con logo --- */
 .cell.empty{
   background: transparent;
   border-style: dashed;
-  opacity: .9;
+  opacity: .92;
+  overflow: hidden;
 }
-.cell.empty .logo{
-  width: 62%;
-  height: 62%;
-  opacity: .95;
-  fill: var(--logoTint);
+.cell.empty img{
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  opacity: .55; /* elegante */
+  filter: grayscale(1);
+  user-select: none;
+  pointer-events: none;
 }
+
+/* --- tensión progresiva --- */
+@keyframes breathe {
+  0%,100% { transform: scale(1); }
+  50%     { transform: scale(1.005); }
+}
+@keyframes tremble {
+  0%   { transform: translate(0,0); }
+  25%  { transform: translate(0.6px,-0.4px); }
+  50%  { transform: translate(-0.6px,0.4px); }
+  75%  { transform: translate(0.4px,0.6px); }
+  100% { transform: translate(0,0); }
+}
+
+.board.tension-low{
+  animation: breathe 2.4s ease-in-out infinite;
+}
+.board.tension-mid{
+  animation: tremble calc(0.55s - (var(--tension) * 0.25s)) linear infinite;
+}
+.board.tension-high{
+  animation: tremble calc(0.38s - (var(--tension) * 0.18s)) linear infinite;
+}
+
+/* --- flash win --- */
+@keyframes winflash {
+  0% { filter: brightness(1); }
+  40% { filter: brightness(1.18); }
+  100% { filter: brightness(1); }
+}
+.board.winflash{ animation: winflash 420ms ease-out; }
 
 .hint{
   color: var(--muted);
