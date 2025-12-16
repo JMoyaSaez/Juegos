@@ -1,20 +1,21 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bingo — Cartón (1–49)</title>
+  <title>Bingo — Cartón 3x9 (15 números)</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <main class="wrap">
     <header class="top">
       <div>
-        <h1>Cartón Bingo</h1>
-        <p class="sub">Genera un cartón aleatorio (1–49) y marca números. Detecta línea y bingo.</p>
+        <h1>Cartón Bingo (3×9)</h1>
+        <p class="sub">15 números (5 por fila). Marca y detecta línea/bingo. Tema dark/light.</p>
       </div>
 
-      <div class="actions">
+      <div class="right">
+        <button id="themeBtn" class="ghost" aria-label="Cambiar tema">🌙</button>
         <button id="newCardBtn" class="primary">Nuevo cartón</button>
         <button id="clearMarksBtn">Limpiar marcas</button>
       </div>
@@ -23,13 +24,13 @@
     <section class="panel">
       <div class="row">
         <label class="check">
-          <input type="checkbox" id="syncReadToggle" checked />
-          <span>Leer números cantados del bombo (localStorage)</span>
+          <input type="checkbox" id="syncReadToggle" />
+          <span>Leer números cantados (localStorage)</span>
         </label>
 
         <label class="check">
           <input type="checkbox" id="autoMarkToggle" />
-          <span>Marcar automáticamente números cantados</span>
+          <span>Marcar automáticamente los cantados</span>
         </label>
       </div>
 
@@ -39,8 +40,14 @@
         <div class="chip ok" id="bingoStatus">Bingo: no</div>
       </div>
 
-      <div id="grid" class="grid" aria-label="Cartón de bingo"></div>
-      <p class="hint">Click en una casilla para marcar/desmarcar. (También se resalta si fue cantada.)</p>
+      <div class="grid" id="grid" aria-label="Cartón de bingo 3 por 9"></div>
+
+      <p class="hint">
+        Click en un número para marcar/desmarcar. Las casillas vacías no se pueden marcar.
+      </p>
+      <p class="hint small">
+        Nota: este cartón usa rangos típicos por columna (1–9, 10–19, …, 80–90) y ordena números por columna.
+      </p>
     </section>
   </main>
 
