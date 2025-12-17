@@ -9,6 +9,30 @@
   --warn:#ffd60a;
 }
 
+/* Tema claro */
+html[data-theme="light"] {
+  --bg: #ffffff;
+  --card: #f0f0f0;
+  --text: #000000;
+  --muted: #666666;
+  --line: #dddddd;
+  --good: #30d158;
+  --bad: #ff453a;
+  --warn: #ffd60a;
+}
+
+/* Tema oscuro */
+html[data-theme="dark"] {
+  --bg: #0b0f19;
+  --card: #111a2b;
+  --text: #e8eefc;
+  --muted: #9fb1d1;
+  --line: #223150;
+  --good: #30d158;
+  --bad: #ff453a;
+  --warn: #ffd60a;
+}
+
 *{box-sizing:border-box}
 body{
   margin:0;
