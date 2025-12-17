@@ -1,33 +1,59 @@
-<!DOCTYPE html>
-<html lang="es">
+<!doctype html>
+<html lang="es" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Bingo – Cartón</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>Bingo — Cartón</title>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
-
 <body>
-  <main class="app">
-
-    <header class="top">
-      <div class="meta">
-        <span id="createdAtLabel">Cartón: --:--:-- · Bombo: --:--:--</span>
+  <main class="app" role="application" aria-label="Cartón de bingo">
+    <header class="topbar">
+      <div class="title">
+        <h1>Cartón Bingo</h1>
+        <p>3×9 · 15 números · columnas por decenas · orden ↑ menor→mayor</p>
       </div>
-      <div id="status" class="statusText">—</div>
+
+      <div class="actions">
+        <button id="themeBtn" class="icon" aria-label="Cambiar tema">🌙</button>
+        <button id="newBtn" class="primary">Nuevo</button>
+        <button id="clearBtn">Limpiar</button>
+      </div>
     </header>
 
-    <section class="board-wrap">
-      <div class="board" id="board" aria-label="Cartón de bingo"></div>
+    <section class="meta">
+      <div class="metaRow">
+        <div class="metaItem">
+          <div class="metaLabel">Hora cartón</div>
+          <div class="metaValue" id="createdAtLabel">--:--:--</div>
+        </div>
+
+        <div class="metaItem">
+          <div class="metaLabel">Hora inicio bombo</div>
+          <div class="metaValue" id="bomboLabel">--:--:--</div>
+        </div>
+      </div>
+
+      <div class="metaRow">
+        <label class="bomboInput">
+          Introduce hora del bombo (HH:MM:SS)
+          <input id="bomboTime" type="text" placeholder="18:42:07" inputmode="numeric" />
+        </label>
+        <button id="saveBomboBtn">Guardar</button>
+      </div>
+
+      <div id="status" class="statusText">—</div>
     </section>
 
-    <footer class="footer">
-      <button id="newBtn">Nuevo cartón</button>
-      <button id="clearBtn">Limpiar marcas</button>
-    </footer>
+    <section class="board-wrap">
+      <div class="board" id="board" aria-label="Rejilla del cartón"></div>
+    </section>
 
+    <footer class="hint">
+      Marca tocando. La validez depende de que la hora del cartón sea anterior a la del bombo.
+    </footer>
   </main>
 
-  <script src="app.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
