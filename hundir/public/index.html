@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hundir la Flota (WebSocket)</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="top">
+    <h1>Hundir la Flota</h1>
+    <div class="pill" id="mePill">Jugador —</div>
+    <div class="pill" id="roomPill">Sala —</div>
+    <div class="pill" id="turnPill">Turno —</div>
+  </header>
+
+  <main class="layout">
+    <section class="card">
+      <h2>Conexión</h2>
+      <div class="row">
+        <button id="btnCreate">Crear partida</button>
+        <input id="roomInput" placeholder="Código sala (ej: A1B2C3)" />
+        <button id="btnJoin">Unirse</button>
+      </div>
+      <p class="hint" id="status">—</p>
+      <p class="hint">Consejo: abre esta página en 2 dispositivos/navegadores para probar.</p>
+    </section>
+
+    <section class="card">
+      <h2>Colocación</h2>
+      <div class="row">
+        <button id="btnRandom">Colocar aleatorio</button>
+        <button id="btnReady" class="primary">READY</button>
+      </div>
+      <p class="hint">En este MVP la colocación es aleatoria (rápido y sin líos). Luego la hacemos manual con click/rotación.</p>
+    </section>
+
+    <section class="boards">
+      <div class="boardWrap">
+        <h3>Mi tablero</h3>
+        <div class="grid" id="myBoard"></div>
+      </div>
+
+      <div class="boardWrap">
+        <h3>Tablero enemigo</h3>
+        <div class="grid" id="enemyBoard"></div>
+        <p class="hint">Haz click para disparar (solo en tu turno).</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
