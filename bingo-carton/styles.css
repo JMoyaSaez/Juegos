@@ -129,9 +129,17 @@ html[data-theme="light"] .cell{
   background: rgba(255,255,255,.55);
 }
 html[data-theme="light"] .cell.marked{
-  background: rgba(255,255,255,0.65);   /* fondo claro, casi neutro */
-  border-color: hsla(var(--hit-hue), 85%, 45%, 0.85);
-  box-shadow: 0 0 14px hsla(var(--hit-hue), 85%, 45%, 0.35);
+  background:
+    linear-gradient(0deg,
+      hsla(var(--hit-hue), 85%, 55%, 0.14),
+      hsla(var(--hit-hue), 85%, 55%, 0.06)
+    ),
+    rgba(255,255,255,0.78);
+  border: 2px solid hsla(var(--hit-hue), 85%, 45%, 0.95);
+  box-shadow:
+    0 0 0 2px hsla(var(--hit-hue), 85%, 55%, 0.18) inset,
+    0 10px 22px hsla(var(--hit-hue), 85%, 45%, 0.16),
+    0 0 16px hsla(var(--hit-hue), 85%, 45%, 0.35);
 }
 html[data-theme="light"] .cell.marked::after{
   opacity: .65;
