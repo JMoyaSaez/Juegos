@@ -128,6 +128,12 @@ button.icon{
 html[data-theme="light"] .cell{
   background: rgba(255,255,255,.55);
 }
+html[data-theme="light"] .cell.marked{
+  background: rgba(255,255,255,0.65);   /* fondo claro, casi neutro */
+  border-color: hsla(var(--hit-hue), 85%, 45%, 0.85);
+  box-shadow: 0 0 14px hsla(var(--hit-hue), 85%, 45%, 0.35);
+}
+
 
 .cell.clickable{ cursor: pointer; }
 .cell.clickable:active{ transform: translateY(1px); }
