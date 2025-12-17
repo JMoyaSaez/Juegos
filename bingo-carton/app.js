@@ -27,8 +27,18 @@ const themeBtn = document.getElementById("themeBtn");
 const newBtn = document.getElementById("newBtn");
 const clearBtn = document.getElementById("clearBtn");
 
+const CARTON_TIME_KEY = "bingo_carton_time_hms";
+const cartonTimeEl = document.getElementById("cartonTime");
+
 let card = emptyCard();
 let marked = new Set();
+
+
+function nowHMS(){
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`;
+}
+
 
 function emptyCard(){
   return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -106,6 +116,10 @@ function loadState(){
 function buildNewCard(){
   card = emptyCard();
   marked.clear();
+
+  const hms = nowHMS();
+  localStorage.setItem(CARTON_TIME_KEY, hms);
+  if (cartonTimeEl) cartonTimeEl.textContent = `Cartón: ${hms}`;
 
   // 1) En cada fila: escoger 5 columnas con número
   const rowCols = [];
@@ -259,6 +273,12 @@ clearBtn.addEventListener("click", () => {
 });
 
 /* ====== boot ====== */
+const savedTime = localStorage.getItem(CARTON_TIME_KEY);
+if (savedTime && cartonTimeEl){
+  cartonTimeEl.textContent = `Cartón: ${savedTime}`;
+}
+
+
 setTheme(getTheme());
 if (!loadState()) buildNewCard();
 else { render(); updateStatus(); }
