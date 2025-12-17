@@ -273,12 +273,18 @@ clearBtn.addEventListener("click", () => {
 });
 
 /* ====== boot ====== */
+setTheme(getTheme());
+if (!loadState()) buildNewCard();
+else { render(); updateStatus(); }
+
 const savedTime = localStorage.getItem(CARTON_TIME_KEY);
 if (savedTime && cartonTimeEl){
   cartonTimeEl.textContent = `Cartón: ${savedTime}`;
 }
 
-
-setTheme(getTheme());
-if (!loadState()) buildNewCard();
-else { render(); updateStatus(); }
+let t = localStorage.getItem(CARTON_TIME_KEY);
+if (!t) {
+  t = nowHMS();
+  localStorage.setItem(CARTON_TIME_KEY, t);
+}
+if (cartonTimeEl) cartonTimeEl.textContent = `Cartón: ${t}`;
