@@ -12,10 +12,10 @@
 /* Tema claro */
 html[data-theme="light"] {
   --bg: #ffffff;
-  --card: #f0f0f0;
-  --text: #000000;
-  --muted: #666666;
-  --line: #dddddd;
+  --card: #f5f5f5;  /* Fondo de los cuadros */
+  --text: #1a1a1a;  /* Color del texto principal */
+  --muted: #555555;  /* Texto secundario */
+  --line: #cccccc;  /* Línea de separación */
   --good: #30d158;
   --bad: #ff453a;
   --warn: #ffd60a;
@@ -32,6 +32,67 @@ html[data-theme="dark"] {
   --bad: #ff453a;
   --warn: #ffd60a;
 }
+
+/* Asegurarnos de que los bordes y sombras se ven bien en el tema claro */
+html[data-theme="light"] .pill {
+  background: #e0e0e0;
+  color: #333;
+  border-color: #b0b0b0;
+}
+
+html[data-theme="light"] .cell {
+  background: #f0f0f0;
+  border-color: #e0e0e0;
+}
+
+html[data-theme="light"] .cell.ship {
+  background: rgba(48, 209, 88, 0.18);
+  border-color: rgba(48, 209, 88, 0.35);
+}
+
+html[data-theme="light"] .cell.miss {
+  background: rgba(159, 177, 209, 0.12);
+}
+
+html[data-theme="light"] .cell.hit {
+  background: rgba(255, 69, 58, 0.25);
+  border-color: rgba(255, 69, 58, 0.55);
+}
+
+html[data-theme="light"] .cell.sunk {
+  background: rgba(255, 69, 58, 0.40);
+  border-color: rgba(255, 69, 58, 0.80);
+}
+
+/* Mejorar visibilidad de botones y textos en tema claro */
+html[data-theme="light"] button {
+  background: #ffffff;
+  color: #1a1a1a;
+  border: 1px solid #cccccc;
+}
+
+html[data-theme="light"] button.primary {
+  border-color: #2d6cff;
+  background: #1b2f66;
+  color: #ffffff;
+}
+
+html[data-theme="light"] .boardWrap {
+  background: #f9f9f9;
+  border-color: #e0e0e0;
+}
+
+/* Mejorar contraste de texto */
+html[data-theme="light"] h1,
+html[data-theme="light"] h2,
+html[data-theme="light"] h3 {
+  color: #1a1a1a;
+}
+
+html[data-theme="light"] .hint {
+  color: #888888;
+}
+
 
 *{box-sizing:border-box}
 body{
