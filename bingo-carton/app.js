@@ -1,154 +1,343 @@
 "use strict";
 
 /* ===== CONFIG ===== */
-const ROWS = 3, COLS = 9, TOTAL = 15;
+const ROWS = 3;
+const COLS = 9;
+const PER_ROW = 5;
+const TOTAL = ROWS * PER_ROW;
 
-const CARTON_KEY = "bingo_carton";
+const CARTON_KEY = "bingo_carton_data";
 const MARKED_KEY = "bingo_carton_marked";
-const CARTON_MS = "carton_created_at_ms";
-const CARTON_HMS = "carton_created_at_hms";
+const CARTON_CREATED_AT_MS_KEY = "carton_created_at_ms";
+const CARTON_CREATED_AT_HMS_KEY = "carton_created_at_hms";
 
-const BINGO_MS = "bingo_started_at_ms";
-const BINGO_HMS = "bingo_started_at_hms";
+const BOMBO_HMS_MANUAL_KEY = "bingo_started_at_hms_manual";
+const THEME_KEY = "bingo_theme";
 
 /* ===== DOM ===== */
-const board = document.getElementById("board");
+const boardEl = document.getElementById("board");
 const statusEl = document.getElementById("status");
 const createdAtLabel = document.getElementById("createdAtLabel");
+const bomboLabel = document.getElementById("bomboLabel");
+
+const bomboTimeInput = document.getElementById("bomboTime");
+const saveBomboBtn = document.getElementById("saveBomboBtn");
+
 const newBtn = document.getElementById("newBtn");
 const clearBtn = document.getElementById("clearBtn");
+const themeBtn = document.getElementById("themeBtn");
 
 /* ===== STATE ===== */
-let carton = [];
+let card = emptyCard();  // 3x9 numbers or null
 let marked = new Set();
 
 /* ===== HELPERS ===== */
-const hms = ms=>{
-  const d=new Date(ms);
-  return `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}:${d.getSeconds().toString().padStart(2,"0")}`;
-};
+function emptyCard(){
+  return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+}
 
-const beep=(f=500,d=70)=>{
-  try{
-    const a=new AudioContext(),o=a.createOscillator(),g=a.createGain();
-    o.frequency.value=f; o.connect(g); g.connect(a.destination);
-    o.start(); g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+d/1000);
-    setTimeout(()=>a.close(),d+50);
-  }catch{}
-};
-
-const vibrate=ms=>navigator.vibrate&&navigator.vibrate(ms);
-
-/* ===== VALIDATION ===== */
-const cartonValid=()=>{
-  const c=+localStorage.getItem(CARTON_MS)||0;
-  const b=+localStorage.getItem(BINGO_MS)||0;
-  return c>0 && b>0 && c<b;
-};
-
-/* ===== GENERATION ===== */
-function genCarton(){
-  carton=Array.from({length:ROWS},()=>Array(COLS).fill(null));
-  const used=new Set();
-
-  for(let c=0;c<COLS;c++){
-    const rows=[0,1,2].sort(()=>Math.random()-0.5).slice(0,Math.floor(Math.random()*2)+1);
-    const min=c===0?1:c*10;
-    const max=c===8?90:c*10+9;
-    const nums=[];
-    for(let n=min;n<=max;n++) if(!used.has(n)) nums.push(n);
-    nums.sort(()=>Math.random()-0.5);
-    const sel=nums.slice(0,rows.length).sort((a,b)=>a-b);
-    rows.sort((a,b)=>a-b).forEach((r,i)=>{
-      carton[r][c]=sel[i]; used.add(sel[i]);
-    });
+function shuffle(arr){
+  for (let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-
-  let count=carton.flat().filter(Boolean).length;
-  if(count!==TOTAL) return genCarton();
-
-  marked.clear();
-  const now=Date.now();
-  localStorage.setItem(CARTON_MS,now);
-  localStorage.setItem(CARTON_HMS,hms(now));
-  save();
+  return arr;
 }
 
-/* ===== STORAGE ===== */
-const save=()=>{
-  localStorage.setItem(CARTON_KEY,JSON.stringify(carton));
-  localStorage.setItem(MARKED_KEY,JSON.stringify([...marked]));
-};
-
-const load=()=>{
-  const c=localStorage.getItem(CARTON_KEY);
-  if(!c) return false;
-  carton=JSON.parse(c);
-  marked=new Set(JSON.parse(localStorage.getItem(MARKED_KEY)||"[]"));
-  return true;
-};
-
-/* ===== UI ===== */
-function updateHeat(){
-  const p=Math.min(1,marked.size/TOTAL);
-  board.style.setProperty("--hit-hue",220-p*220);
+function formatHMS(ms){
+  const d = new Date(ms);
+  const hh = String(d.getHours()).padStart(2,"0");
+  const mm = String(d.getMinutes()).padStart(2,"0");
+  const ss = String(d.getSeconds()).padStart(2,"0");
+  return `${hh}:${mm}:${ss}`;
 }
 
-function render(){
-  board.innerHTML="";
-  carton.forEach(r=>r.forEach(v=>{
-    const d=document.createElement("div");
-    d.className="cell";
-    if(v==null){
-      d.classList.add("empty");
-    }else{
-      d.textContent=v;
-      d.classList.add("clickable");
-      if(marked.has(v)) d.classList.add("marked");
-      d.onclick=()=>{
-        if(marked.has(v)) marked.delete(v);
-        else{
-          marked.add(v); beep(520+marked.size*20);
-          if(marked.size>=12) vibrate(20);
-        }
-        save(); updateHeat(); render();
-      };
-    }
-    board.appendChild(d);
-  }));
+function hmsToSeconds(hms){
+  const m = /^(\d{2}):(\d{2}):(\d{2})$/.exec((hms || "").trim());
+  if (!m) return null;
+  const hh = +m[1], mm = +m[2], ss = +m[3];
+  if (hh > 23 || mm > 59 || ss > 59) return null;
+  return hh * 3600 + mm * 60 + ss;
+}
+
+/* === sonido + vibración === */
+function beep(freq = 520, dur = 70){
+  try{
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.value = freq;
+    g.gain.value = 0.08;
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur/1000);
+    setTimeout(() => ctx.close(), dur + 60);
+  }catch{}
+}
+
+function vib(ms){
+  if (navigator.vibrate) navigator.vibrate(ms);
+}
+
+/* ===== THEME ===== */
+function setTheme(t){
+  document.documentElement.setAttribute("data-theme", t);
+  localStorage.setItem(THEME_KEY, t);
+  if (themeBtn) themeBtn.textContent = t === "dark" ? "🌙" : "☀️";
+}
+function toggleTheme(){
+  const now = document.documentElement.getAttribute("data-theme") || "dark";
+  setTheme(now === "dark" ? "light" : "dark");
+}
+
+/* ===== BOMBO TIME (manual, cross-device) ===== */
+function getBomboHMS(){
+  return localStorage.getItem(BOMBO_HMS_MANUAL_KEY) || "--:--:--";
+}
+
+function saveBomboHMS(){
+  const v = (bomboTimeInput.value || "").trim();
+  if (hmsToSeconds(v) == null){
+    alert("Formato inválido. Usa HH:MM:SS");
+    return;
+  }
+  localStorage.setItem(BOMBO_HMS_MANUAL_KEY, v);
+  renderMeta();
   updateStatus();
 }
 
-function updateStatus(){
-  const valid=cartonValid();
-  const hits=marked.size;
-  createdAtLabel.textContent=
-    `Cartón: ${localStorage.getItem(CARTON_HMS)||"--"} · Bombo: ${localStorage.getItem(BINGO_HMS)||"--"}`;
+/* ===== VALIDACIÓN ===== */
+function cartonValid(){
+  const cartonH = localStorage.getItem(CARTON_CREATED_AT_HMS_KEY) || "";
+  const bomboH = getBomboHMS();
+  const c = hmsToSeconds(cartonH);
+  const b = hmsToSeconds(bomboH);
+  if (c == null || b == null) return false;
+  return c < b;
+}
 
-  if(!valid){
-    statusEl.textContent="❌ Cartón NO válido";
-    statusEl.className="statusText invalid";
+/* ===== GENERACIÓN CARTÓN (90 bingo) ===== */
+function colRange(col){
+  if (col === 0) return [1, 9];
+  if (col === 8) return [80, 90];
+  const start = col * 10;
+  return [start, start + 9];
+}
+
+function pickUnique(count, min, max, used){
+  const pool = [];
+  for (let n = min; n <= max; n++){
+    if (!used.has(n)) pool.push(n);
+  }
+  shuffle(pool);
+  return pool.slice(0, count);
+}
+
+function buildNewCard(){
+  card = emptyCard();
+  marked.clear();
+
+  // columnas activas por fila (5)
+  const rowCols = [];
+  for (let r = 0; r < ROWS; r++){
+    const cols = Array.from({ length: COLS }, (_, i) => i);
+    shuffle(cols);
+    rowCols.push(cols.slice(0, PER_ROW).sort((a,b)=>a-b));
+  }
+
+  // recuento por columna
+  const colCount = Array(COLS).fill(0);
+  for (let r = 0; r < ROWS; r++){
+    for (const c of rowCols[r]) colCount[c]++;
+  }
+
+  const usedGlobal = new Set();
+
+  for (let c = 0; c < COLS; c++){
+    const k = colCount[c];
+    if (k === 0) continue;
+
+    const [min, max] = colRange(c);
+    const nums = pickUnique(k, min, max, usedGlobal);
+
+    // ✅ ORDEN POR COLUMNA: menor → mayor (arriba → abajo)
+    nums.sort((a,b)=>a-b);
+    nums.forEach(n => usedGlobal.add(n));
+
+    const rowsWith = [];
+    for (let r = 0; r < ROWS; r++){
+      if (rowCols[r].includes(c)) rowsWith.push(r);
+    }
+    rowsWith.sort((a,b)=>a-b);
+
+    for (let i = 0; i < rowsWith.length; i++){
+      card[rowsWith[i]][c] = nums[i];
+    }
+  }
+
+  // timestamp cartón
+  const now = Date.now();
+  localStorage.setItem(CARTON_CREATED_AT_MS_KEY, String(now));
+  localStorage.setItem(CARTON_CREATED_AT_HMS_KEY, formatHMS(now));
+
+  saveState();
+  renderMeta();
+  render();
+}
+
+/* ===== PERSISTENCIA ===== */
+function saveState(){
+  localStorage.setItem(CARTON_KEY, JSON.stringify(card));
+  localStorage.setItem(MARKED_KEY, JSON.stringify([...marked]));
+}
+
+function loadState(){
+  try{
+    const c = localStorage.getItem(CARTON_KEY);
+    if (!c) return false;
+    card = JSON.parse(c);
+    marked = new Set(JSON.parse(localStorage.getItem(MARKED_KEY) || "[]"));
+    return Array.isArray(card) && card.length === ROWS;
+  }catch{
+    return false;
+  }
+}
+
+/* ===== UI ===== */
+function updateHeat(){
+  const progress = Math.min(1, marked.size / TOTAL);
+  const hue = 220 - progress * 220; // azul -> rojo
+  boardEl.style.setProperty("--hit-hue", String(hue));
+}
+
+function renderMeta(){
+  const cartonH = localStorage.getItem(CARTON_CREATED_AT_HMS_KEY) || "--:--:--";
+  const bomboH = getBomboHMS();
+  createdAtLabel.textContent = cartonH;
+  bomboLabel.textContent = bomboH;
+}
+
+function render(){
+  boardEl.innerHTML = "";
+
+  for (let r = 0; r < ROWS; r++){
+    for (let c = 0; c < COLS; c++){
+      const v = card[r][c];
+      const cell = document.createElement("div");
+      cell.className = "cell";
+
+      if (v == null){
+        cell.classList.add("empty");
+      } else {
+        cell.classList.add("clickable");
+        cell.textContent = String(v);
+        if (marked.has(v)) cell.classList.add("marked");
+
+        cell.addEventListener("click", () => {
+          const wasMarked = marked.has(v);
+          if (wasMarked) marked.delete(v);
+          else {
+            marked.add(v);
+
+            // sonido / vibración con “nervios”
+            const hits = marked.size;
+            beep(520 + Math.min(380, hits * 24), 70);
+            if (hits >= 12) vib(18);
+            if (hits >= 14) vib(28);
+          }
+
+          saveState();
+          updateHeat();
+          updateStatus();
+          render(); // simple y fiable
+        });
+      }
+
+      boardEl.appendChild(cell);
+    }
+  }
+
+  updateHeat();
+  updateStatus();
+}
+
+function hasLine(){
+  for (let r = 0; r < ROWS; r++){
+    const nums = card[r].filter(x => x != null);
+    if (nums.length === PER_ROW && nums.every(n => marked.has(n))) return true;
+  }
+  return false;
+}
+
+function updateStatus(){
+  const valid = cartonValid();
+  const hits = marked.size;
+  const line = hasLine();
+  const bingo = hits === TOTAL;
+
+  if (!valid){
+    statusEl.textContent = `❌ Cartón NO válido · ${hits}/15`;
+    statusEl.className = "statusText invalid";
     return;
   }
-  if(hits===TOTAL){
-    statusEl.textContent="🎉 BINGO";
-    statusEl.className="statusText bingo";
-    beep(900,200); vibrate(60);
+
+  if (bingo){
+    statusEl.textContent = `🎉 BINGO ✅`;
+    statusEl.className = "statusText bingo";
+    beep(900, 180);
+    vib(60);
     return;
   }
-  if(carton.some(r=>r.filter(Boolean).every(n=>marked.has(n)))){
-    statusEl.textContent="✔ LÍNEA";
-    statusEl.className="statusText line";
+
+  if (line){
+    statusEl.textContent = `✔ LÍNEA ✅ · ${hits}/15`;
+    statusEl.className = "statusText line";
     return;
   }
-  statusEl.textContent=`— ${hits}/15`;
-  statusEl.className="statusText";
+
+  statusEl.textContent = `— Marcados: ${hits}/15`;
+  statusEl.className = "statusText";
+}
+
+/* ===== ACTIONS ===== */
+function clearMarks(){
+  marked.clear();
+  saveState();
+  updateHeat();
+  updateStatus();
+  render();
 }
 
 /* ===== EVENTS ===== */
-newBtn.onclick=()=>{ genCarton(); save(); render(); };
-clearBtn.onclick=()=>{ marked.clear(); save(); render(); };
+newBtn.addEventListener("click", buildNewCard);
+clearBtn.addEventListener("click", clearMarks);
+themeBtn.addEventListener("click", toggleTheme);
+saveBomboBtn.addEventListener("click", saveBomboHMS);
 
-/* ===== INIT ===== */
-if(!load()) genCarton();
-render();
+/* ===== BOOT ===== */
+(function boot(){
+  // theme
+  setTheme(localStorage.getItem(THEME_KEY) || "dark");
+
+  // bombo input preload
+  const savedBombo = localStorage.getItem(BOMBO_HMS_MANUAL_KEY);
+  if (savedBombo) bomboTimeInput.value = savedBombo;
+
+  // carton state
+  if (!loadState()){
+    buildNewCard();
+  } else {
+    // si faltan timestamps, los creamos
+    if (!localStorage.getItem(CARTON_CREATED_AT_HMS_KEY)){
+      const now = Date.now();
+      localStorage.setItem(CARTON_CREATED_AT_MS_KEY, String(now));
+      localStorage.setItem(CARTON_CREATED_AT_HMS_KEY, formatHMS(now));
+    }
+    renderMeta();
+    render();
+  }
+})();
