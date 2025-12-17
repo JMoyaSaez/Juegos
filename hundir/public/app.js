@@ -31,6 +31,36 @@ let myShips = [];              // placement ships
 let enemyView = emptyGrid();   // 0 unknown, 2 miss, 3 hit (local view only)
 let readySent = false;
 
+
+// UI elements
+const themeToggle = document.getElementById("themeToggle");
+
+// Tema oscuro o claro
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute("data-theme");
+  const newTheme = currentTheme === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", newTheme);
+  localStorage.setItem("theme", newTheme);  // Guardar la preferencia
+}
+
+// Cargar el tema desde localStorage (si existe)
+function loadTheme() {
+  const savedTheme = localStorage.getItem("theme") || "dark";  // Predeterminado es dark
+  document.documentElement.setAttribute("data-theme", savedTheme);
+}
+
+// Evento para el botón de alternar tema
+themeToggle.addEventListener("click", () => {
+  toggleTheme();
+});
+
+// Cargar el tema inicial
+loadTheme();
+
+
+
+
+
 function setStatus(t){ statusEl.textContent = t; }
 
 function emptyGrid(){
