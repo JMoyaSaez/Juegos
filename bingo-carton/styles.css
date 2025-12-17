@@ -74,6 +74,22 @@ body{
   user-select: none;
 }
 
+#cartonTime{
+  font-size: 1.05rem;        /* ⬅ más grande */
+  font-weight: 600;
+  letter-spacing: 0.3px;
+
+  padding: 6px 12px;
+  border-radius: 999px;
+
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+
+  color: var(--text);
+  white-space: nowrap;
+}
+
+
 /* botones */
 button{
   border: 1px solid var(--border);
@@ -201,7 +217,7 @@ html[data-theme="light"] .cell.marked::after{
   opacity: .9;
 }
 
-.cartonTime{
+.{
   font-size: 12px;
   opacity: .65;
   font-weight: 700;
