@@ -133,7 +133,9 @@ html[data-theme="light"] .cell.marked{
   border-color: hsla(var(--hit-hue), 85%, 45%, 0.85);
   box-shadow: 0 0 14px hsla(var(--hit-hue), 85%, 45%, 0.35);
 }
-
+html[data-theme="light"] .cell.marked::after{
+  opacity: .65;
+}
 
 .cell.clickable{ cursor: pointer; }
 .cell.clickable:active{ transform: translateY(1px); }
