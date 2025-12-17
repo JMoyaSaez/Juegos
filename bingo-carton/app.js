@@ -277,11 +277,6 @@ setTheme(getTheme());
 if (!loadState()) buildNewCard();
 else { render(); updateStatus(); }
 
-const savedTime = localStorage.getItem(CARTON_TIME_KEY);
-if (savedTime && cartonTimeEl){
-  cartonTimeEl.textContent = `Cartón: ${savedTime}`;
-}
-
 let t = localStorage.getItem(CARTON_TIME_KEY);
 if (!t) {
   t = nowHMS();
