@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3 en Raya — HTML5 + CSS3 + JS</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="title">
+        <h1>3 en Raya</h1>
+        <p class="sub">Transiciones CSS · Dark/Light · Tiempo</p>
+      </div>
+
+      <div class="actions">
+        <button id="themeBtn" class="btn ghost" type="button" aria-label="Cambiar tema">
+          🌙 / ☀️
+        </button>
+        <button id="newBtn" class="btn" type="button">Nueva partida</button>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="status">
+        <div class="chip" id="turnChip" aria-live="polite">Turno: <strong>X</strong></div>
+        <div class="chip" id="timerChip">Tiempo: <strong id="timer">00:00.0</strong></div>
+        <div class="chip" id="scoreChip">
+          Marcador:
+          <strong>X</strong> <span id="scoreX">0</span> ·
+          <strong>O</strong> <span id="scoreO">0</span>
+        </div>
+      </div>
+
+      <div class="best">
+        <div class="mini">
+          Mejor X: <strong id="bestX">—</strong>
+        </div>
+        <div class="mini">
+          Mejor O: <strong id="bestO">—</strong>
+        </div>
+      </div>
+    </section>
+
+    <main class="boardWrap">
+      <div id="board" class="board" role="grid" aria-label="Tablero 3 en raya">
+        <!-- 9 celdas -->
+        <button class="cell" data-i="0" role="gridcell" aria-label="Celda 1"></button>
+        <button class="cell" data-i="1" role="gridcell" aria-label="Celda 2"></button>
+        <button class="cell" data-i="2" role="gridcell" aria-label="Celda 3"></button>
+        <button class="cell" data-i="3" role="gridcell" aria-label="Celda 4"></button>
+        <button class="cell" data-i="4" role="gridcell" aria-label="Celda 5"></button>
+        <button class="cell" data-i="5" role="gridcell" aria-label="Celda 6"></button>
+        <button class="cell" data-i="6" role="gridcell" aria-label="Celda 7"></button>
+        <button class="cell" data-i="7" role="gridcell" aria-label="Celda 8"></button>
+        <button class="cell" data-i="8" role="gridcell" aria-label="Celda 9"></button>
+      </div>
+
+      <div id="overlay" class="overlay" aria-hidden="true">
+        <div class="card">
+          <h2 id="resultTitle">Resultado</h2>
+          <p id="resultText" class="muted">—</p>
+          <div class="overlayActions">
+            <button id="playAgainBtn" class="btn" type="button">Jugar otra</button>
+            <button id="resetAllBtn" class="btn ghost" type="button">Reset marcador</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <span class="muted">Tip: prueba a ganar en diagonal 😉</span>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
