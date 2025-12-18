@@ -15,7 +15,8 @@ function showChunk(i){
   if (!chunks.length) return;
   chunkIndex = Math.max(0, Math.min(i, chunks.length-1));
   qrEl.innerHTML = "";
-  new QRCode(qrEl, { text: chunks[chunkIndex], width: 420, height: 420, correctLevel: QRCode.CorrectLevel.L });
+  const size = Math.min(420, Math.floor(window.innerWidth * 0.92));
+  new QRCode(qrEl, { text: chunks[chunkIndex], width: size, height: size, correctLevel: QRCode.CorrectLevel.L });
   progressEl.textContent = `QR ${chunkIndex+1}/${chunks.length}`;
 }
 
