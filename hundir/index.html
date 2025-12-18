@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Hundir la flota LAN</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 16px; }
+    button { font-size: 18px; padding: 14px 16px; width: 100%; margin: 8px 0; }
+    .card { border: 1px solid #ddd; border-radius: 14px; padding: 14px; margin: 10px 0; }
+    #qr { display:flex; justify-content:center; }
+    #qr canvas, #qr img { width: min(320px, 85vw) !important; height: auto !important; }
+    video { width: 100%; border-radius: 12px; border: 1px solid #ddd; }
+    textarea { width: 100%; min-height: 110px; font-size: 12px; }
+    .ok { color: #0a7; font-weight: 700; }
+    .bad { color: #c33; font-weight: 700; }
+  </style>
+
+  <!-- QR generator -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <!-- QR scanner -->
+  <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
+</head>
+<body>
+
+  <h2>Hundir la flota (LAN Wi-Fi)</h2>
+
+  <div class="card">
+    <button id="btnHost">Crear partida (Host)</button>
+    <button id="btnJoin">Unirme (Cliente)</button>
+  </div>
+
+  <div class="card">
+    <div id="status">Estado: <span class="bad">Desconectado</span></div>
+    <div id="role"></div>
+  </div>
+
+  <div class="card">
+    <h3>QR</h3>
+    <div id="qr"></div>
+    <p style="opacity:.75;margin:8px 0 0;">Consejo: sube el brillo al máximo para escanear mejor.</p>
+  </div>
+
+  <div class="card">
+    <h3>Cámara (escaneo)</h3>
+    <video id="video" muted playsinline></video>
+    <button id="btnStartCam">Abrir cámara</button>
+    <button id="btnStopCam">Cerrar cámara</button>
+  </div>
+
+  <div class="card">
+    <h3>Debug (SDP)</h3>
+    <textarea id="debug" placeholder="Aquí verás el texto del QR (por si quieres copiar/pegar)."></textarea>
+  </div>
+
+  <div class="card">
+    <h3>Test</h3>
+    <button id="btnPing" disabled>Enviar PING</button>
+    <div id="log"></div>
+  </div>
+
+  <script type="module">
+    import { createHost, createClient } from './webrtc-lan.js';
+
+    const el = (id) => document.getElementById(id);
+    const statusEl = el('status');
+    const roleEl = el('role');
+    const qrEl = el('qr');
+    const debugEl = el('debug');
+    const logEl = el('log');
+
+    const video = el('video');
+    let scanner = null;
+
+    const setStatus = (ok, text) => {
+      statusEl.innerHTML = `Estado: <span class="${ok ? 'ok':'bad'}">${text}</span>`;
+    };
+
+    const log = (msg) => {
+      const p = document.createElement('div');
+      p.textContent = msg;
+      logEl.prepend(p);
+    };
+
+    const showQR = async (text) => {
+      qrEl.innerHTML = '';
+      const canvas = document.createElement('canvas');
+      qrEl.appendChild(canvas);
+      await QRCode.toCanvas(canvas, text, { errorCorrectionLevel: 'M', margin: 1, scale: 8 });
+      debugEl.value = text;
+    };
+
+    const startScanner = async (onText) => {
+      if (!scanner) {
+        // QR-Scanner needs this path for worker in some setups; UMD already bundles,
+        // but setting it doesn't hurt.
+        // QRScanner.WORKER_PATH = '...';
+        scanner = new QrScanner(video, (result) => onText(result.data), { highlightScanRegion: true });
+      }
+      await scanner.start();
+      log('📷 Cámara activa');
+    };
+
+    const stopScanner = async () => {
+      if (scanner) { await scanner.stop(); }
+      log('📷 Cámara parada');
+    };
+
+    el('btnStartCam').onclick = () => startScanner((t)=>log('QR leído (sin acción): ' + t.slice(0,60)+'...'));
+    el('btnStopCam').onclick = () => stopScanner();
+
+    // --- Host flow ---
+    el('btnHost').onclick = async () => {
+      roleEl.textContent = 'Rol: HOST';
+      setStatus(false, 'Creando offer...');
+      log('🧩 HOST: creando conexión');
+
+      const host = await createHost({
+        onOffer: async (offerText) => {
+          setStatus(false, 'Escanea este QR con el CLIENTE (offer)');
+          await showQR(offerText);
+        },
+        onConnected: () => {
+          setStatus(true, 'Conectado');
+          el('btnPing').disabled = false;
+          log('✅ Canal abierto (HOST)');
+        },
+        onMessage: (m) => log('⬅️ ' + m),
+        onLog: log
+      });
+
+      // Host needs to scan ANSWER
+      await startScanner(async (text) => {
+        // Intentamos aplicar como ANSWER
+        if (text.startsWith('BATTLESHIP_ANSWER|')) {
+          await stopScanner();
+          setStatus(false, 'Aplicando answer...');
+          await host.applyAnswer(text);
+        }
+      });
+
+      log('📷 Escanea el QR de ANSWER del cliente');
+    };
+
+    // --- Client flow ---
+    el('btnJoin').onclick = async () => {
+      roleEl.textContent = 'Rol: CLIENTE';
+      setStatus(false, 'Escanea el QR del HOST (offer)');
+      log('🧩 CLIENTE: esperando offer');
+
+      const client = await createClient({
+        onAnswer: async (answerText) => {
+          setStatus(false, 'Enseña este QR al HOST (answer)');
+          await showQR(answerText);
+        },
+        onConnected: () => {
+          setStatus(true, 'Conectado');
+          el('btnPing').disabled = false;
+          log('✅ Canal abierto (CLIENTE)');
+        },
+        onMessage: (m) => log('⬅️ ' + m),
+        onLog: log
+      });
+
+      await startScanner(async (text) => {
+        if (text.startsWith('BATTLESHIP_OFFER|')) {
+          await stopScanner();
+          setStatus(false, 'Aplicando offer...');
+          await client.applyOffer(text);
+        }
+      });
+    };
+
+    el('btnPing').onclick = () => {
+      window.__sendPing?.();
+    };
+  </script>
+</body>
+</html>
