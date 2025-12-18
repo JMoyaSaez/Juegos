@@ -10,7 +10,25 @@
     .wrap{max-width:720px;margin:0 auto;padding:16px}
     .card{border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.06);padding:14px;margin:12px 0}
     button{width:100%;padding:14px;font-size:16px;border-radius:14px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff}
-    #qr img{width:min(420px,92vw);background:#fff;padding:10px;border-radius:14px}
+    /* El contenedor QR nunca excede el móvil */
+    #qr {
+      width: 100%;
+      max-width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+    
+    /* La imagen del QR se adapta al ancho del móvil */
+    #qr img {
+      width: min(92vw, 420px);
+      height: auto;
+      display: block;
+      background: #fff;
+      padding: 10px;
+      border-radius: 14px;
+    }
     video{width:100%;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:#000;aspect-ratio:16/10;object-fit:cover}
     .row{display:flex;gap:10px;flex-wrap:wrap}
     .pill{padding:6px 10px;border:1px solid rgba(255,255,255,.12);border-radius:999px;color:rgba(255,255,255,.75);font-size:12px}
