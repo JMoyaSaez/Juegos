@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Conecta 4 — HTML5 + CSS3 + JS</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="title">
+        <h1>Conecta 4</h1>
+        <p class="sub">Transiciones CSS · Dark/Light · Tiempo · Vibración · Sonido</p>
+      </div>
+
+      <div class="actions">
+        <button id="soundBtn" class="btn ghost" type="button" aria-label="Sonido">
+          🔊
+        </button>
+        <button id="vibeBtn" class="btn ghost" type="button" aria-label="Vibración">
+          📳
+        </button>
+        <button id="themeBtn" class="btn ghost" type="button" aria-label="Cambiar tema">
+          🌙 / ☀️
+        </button>
+        <button id="newBtn" class="btn" type="button">Nueva</button>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="status">
+        <div class="chip" id="turnChip" aria-live="polite">
+          Turno: <strong><span class="dot red"></span> Rojo</strong>
+        </div>
+        <div class="chip">Tiempo: <strong id="timer">00:00.0</strong></div>
+        <div class="chip">
+          Marcador:
+          <strong>Rojo</strong> <span id="scoreR">0</span> ·
+          <strong>Amarillo</strong> <span id="scoreY">0</span> ·
+          <strong>Empates</strong> <span id="scoreD">0</span>
+        </div>
+      </div>
+
+      <div class="best">
+        <div class="mini">Mejor Rojo: <strong id="bestR">—</strong></div>
+        <div class="mini">Mejor Amarillo: <strong id="bestY">—</strong></div>
+      </div>
+    </section>
+
+    <main class="boardWrap">
+      <div class="hint muted" id="hint">Toca una columna para soltar ficha.</div>
+
+      <div id="board" class="board" role="grid" aria-label="Tablero Conecta 4">
+        <!-- Se genera por JS -->
+      </div>
+
+      <div id="overlay" class="overlay" aria-hidden="true">
+        <div class="card">
+          <h2 id="resultTitle">Resultado</h2>
+          <p id="resultText" class="muted">—</p>
+          <div class="overlayActions">
+            <button id="playAgainBtn" class="btn" type="button">Jugar otra</button>
+            <button id="resetAllBtn" class="btn ghost" type="button">Reset marcador</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <span class="muted">Tip: en móvil, prueba a mantener el dedo y deslizar por columnas 😄</span>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
