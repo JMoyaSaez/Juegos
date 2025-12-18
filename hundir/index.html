@@ -10,22 +10,25 @@
     button { font-size:18px; padding:14px; width:100%; margin:8px 0; }
     .card { border:1px solid #ddd; border-radius:14px; padding:14px; margin:10px 0; }
     #qr { display:flex; justify-content:center; }
-    #qr img { width:min(320px,85vw); }
+    #qr img { width:min(380px,90vw); height:auto; } /* MÁS GRANDE */
     video { width:100%; border-radius:12px; border:1px solid #ddd; }
     .ok { color:#0a7; font-weight:700; }
     .bad { color:#c33; font-weight:700; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; }
   </style>
 
-  <!-- QR generator (estable) -->
+  <!-- QR generator -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- ✅ Compresión (DEFLATE) -->
+  <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
 
   <!-- QR scanner -->
   <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
 </head>
 <body>
 
-<h2>Hundir la flota · LAN Wi-Fi - X</h2>
+<h2>Hundir la flota · LAN Wi-Fi</h2>
 
 <div class="card">
   <button id="btnHost">Crear partida (Host)</button>
