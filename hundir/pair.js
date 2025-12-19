@@ -1,256 +1,90 @@
-(() => {
-const $ = (id) => document.getElementById(id);
-
+const $ = id => document.getElementById(id);
 const statusEl = $("status");
-const roleEl   = $("role");
-const qrEl     = $("qr");
-const progressEl = $("progress");
-const logEl    = $("log");
-const video    = $("video");
-const prevBtn  = $("prev");
-const nextBtn  = $("next");
-const camBtn   = $("btnCam");
+const roleEl = $("role");
+const qrEl = $("qr");
 
-let scanner = null;
-
-// --- estado QR por trozos ---
-let chunks = [];
-let chunkIndex = 0;
-
-// --- buckets para ensamblar trozos escaneados ---
-const buckets = new Map(); // id -> { total, arr, kind }
-
-const log = (t) => { logEl.innerHTML = `${t}<br>${logEl.innerHTML}`; };
 const setStatus = (ok, t) => {
   statusEl.textContent = t;
   statusEl.className = ok ? "ok" : "bad";
 };
 
-function showChunk(i){
-  if (!chunks.length) return;
-  chunkIndex = Math.max(0, Math.min(i, chunks.length - 1));
-  qrEl.innerHTML = "";
+// --- Dark / Light ---
+const KEY="theme";
+$("themeBtn").onclick=()=>{
+  const t=document.documentElement.dataset.theme==="dark"?"light":"dark";
+  document.documentElement.dataset.theme=t;
+  localStorage.setItem(KEY,t);
+};
+document.documentElement.dataset.theme=localStorage.getItem(KEY)||"dark";
 
-  // Tamaño dinámico (nunca desborda)
-  const size = Math.min(420, Math.floor(window.innerWidth * 0.92));
-
-  // QRCodeJS crea un <img> dentro del contenedor
-  new QRCode(qrEl, {
-    text: chunks[chunkIndex],
-    width: size,
-    height: size,
-    correctLevel: QRCode.CorrectLevel.L
-  });
-
-  progressEl.textContent = `QR ${chunkIndex + 1}/${chunks.length}`;
-}
-
-prevBtn.onclick = () => showChunk(chunkIndex - 1);
-nextBtn.onclick = () => showChunk(chunkIndex + 1);
-
-// --- WebRTC LAN ---
-const pcConfig = { iceServers: [], bundlePolicy: "max-bundle" };
-
-function waitIceComplete(pc){
-  return new Promise((resolve) => {
-    if (pc.iceGatheringState === "complete") return resolve();
-    const onState = () => {
-      if (pc.iceGatheringState === "complete") {
-        pc.removeEventListener("icegatheringstatechange", onState);
-        resolve();
-      }
-    };
-    pc.addEventListener("icegatheringstatechange", onState);
-    pc.addEventListener("icecandidate", (e) => { if (!e.candidate) resolve(); });
+// --- QR ---
+function showQR(text){
+  qrEl.innerHTML="";
+  new QRCode(qrEl,{
+    text,
+    width:360,
+    height:360,
+    correctLevel:QRCode.CorrectLevel.L
   });
 }
 
-function wireLogs(pc, tag){
-  pc.onconnectionstatechange = () => log(`${tag} connectionState: ${pc.connectionState}`);
-  pc.oniceconnectionstatechange = () => log(`${tag} ice: ${pc.iceConnectionState}`);
-  pc.onsignalingstatechange = () => log(`${tag} signaling: ${pc.signalingState}`);
-  pc.onicegatheringstatechange = () => log(`${tag} gathering: ${pc.iceGatheringState}`);
-}
-
-// --- compresión + base64url ---
-function u8ToB64url(u8){
-  let s = "";
-  for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
-  return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-}
-function b64urlToU8(b64url){
-  const b64 = b64url.replace(/-/g,"+").replace(/_/g,"/") + "===".slice((b64url.length + 3) % 4);
-  const bin = atob(b64);
-  const u8 = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-  return u8;
-}
-function pack(prefix, obj){
-  const json = JSON.stringify(obj);
-  const def = pako.deflate(json);
-  return `${prefix}|${u8ToB64url(def)}`;
-}
-function unpack(text, expectedPrefix){
-  const [pr, b64u] = text.split("|");
-  if (pr !== expectedPrefix) throw new Error("Prefijo incorrecto: " + pr);
-  const json = pako.inflate(b64urlToU8(b64u), { to: "string" });
-  return JSON.parse(json);
-}
-
-// --- chunking: QRs cortos y fáciles de leer ---
-// Formato: BS1|KIND|ID|IDX|TOTAL|PAYLOAD
-function chunkify(kind, packed, maxLen = 360){
-  const id = Math.random().toString(36).slice(2, 8).toUpperCase();
-  const parts = [];
-  for (let i = 0; i < packed.length; i += maxLen) parts.push(packed.slice(i, i + maxLen));
-  const total = parts.length;
-  return parts.map((payload, idx) => `BS1|${kind}|${id}|${idx + 1}|${total}|${payload}`);
-}
-function parseChunk(str){
-  const a = str.split("|");
-  if (a.length < 6 || a[0] !== "BS1") return null;
-  const kind = a[1];
-  const id = a[2];
-  const idx = parseInt(a[3], 10);
-  const total = parseInt(a[4], 10);
-  const payload = a.slice(5).join("|");
-  if (!kind || !id || !idx || !total || !payload) return null;
-  return { kind, id, idx, total, payload };
-}
-function assemble(arr){ return arr.join(""); }
-
-// --- QR scanner robusto (lo que te fallaba) ---
-async function startScanner(onText){
-  if (!scanner) {
-    // Intenta usar cámara trasera
-    try { QrScanner.setCameraPreference("environment"); } catch {}
-
-    scanner = new QrScanner(
-      video,
-      (result) => {
-        const text = typeof result === "string" ? result : result.data;
-        if (typeof text === "string" && text.length > 0) {
-          onText(text);
-        }
-      },
-      {
-        inversionMode: "both",
-        maxScansPerSecond: 10,
-        highlightScanRegion: true,
-        highlightCodeOutline: true
-      }
-    );
-  }
-
-  await scanner.start();
-  log("📷 Cámara activa");
-}
-
-// Botón para activar permisos de cámara
-camBtn.onclick = async () => {
-  try { await startScanner(() => {}); }
-  catch (e) { log("❌ Cámara: " + (e?.message || e)); }
+// --- WebRTC (LAN simple) ---
+const pc = new RTCPeerConnection({iceServers:[]});
+pc.ondatachannel = e => {
+  e.channel.onopen = () => {
+    setStatus(true,"Conectado");
+    setTimeout(()=>location.href="game.html",500);
+  };
 };
 
-// --- navegación al juego ---
-function goGame(){
-  setStatus(true, "Conectado ✅");
-  log("🎮 Saltando a game.html…");
-  setTimeout(() => { window.location.href = "game.html"; }, 500);
+function compress(o){
+  return btoa(String.fromCharCode(...pako.deflate(JSON.stringify(o))));
+}
+function decompress(s){
+  return JSON.parse(pako.inflate(
+    Uint8Array.from(atob(s),c=>c.charCodeAt(0)),{to:"string"}
+  ));
 }
 
-// --- HOST flow ---
-async function hostFlow(){
-  roleEl.textContent = "Rol: HOST";
-  setStatus(false, "Creando offer…");
-  log("HOST: creando RTCPeerConnection");
+// --- Host ---
+$("btnHost").onclick = async ()=>{
+  roleEl.textContent="Rol: HOST";
+  setStatus(false,"Generando QR…");
 
-  const pc = new RTCPeerConnection(pcConfig);
-  wireLogs(pc, "HOST");
-
-  const dc = pc.createDataChannel("game", { ordered: true });
-  dc.onopen = goGame;
-  dc.onmessage = (e) => log("⬅ " + e.data);
+  const dc = pc.createDataChannel("game");
+  dc.onopen = ()=>setStatus(true,"Conectado");
 
   await pc.setLocalDescription(await pc.createOffer());
-  await waitIceComplete(pc);
+  await new Promise(r=>pc.onicecandidate=e=>!e.candidate&&r());
 
-  const packedOffer = pack("BATTLESHIP_OFFER", pc.localDescription);
-  chunks = chunkify("OFFER", packedOffer, 360);
-  showChunk(0);
+  showQR("OFFER|"+compress(pc.localDescription));
+};
 
-  setStatus(false, "Cliente escanea tus QRs (offer)");
-  log(`HOST: offer en ${chunks.length} QRs`);
+// --- Cliente ---
+$("btnJoin").onclick = ()=>{
+  roleEl.textContent="Rol: CLIENTE";
+  setStatus(false,"Escanea el QR del host");
+};
 
-  await startScanner(async (txt) => {
-    const c = parseChunk(txt);
-    if (!c || c.kind !== "ANSWER") return;
+const scanner = new Html5Qrcode("reader");
 
-    // bucket
-    if (!buckets.has(c.id)) buckets.set(c.id, { total: c.total, arr: Array(c.total).fill(null), kind: c.kind });
-    const b = buckets.get(c.id);
-    b.arr[c.idx - 1] = c.payload;
+$("btnCam").onclick = async ()=>{
+  await scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    async text => {
+      if(!text.startsWith("OFFER|")) return;
 
-    const got = b.arr.filter(Boolean).length;
-    setStatus(false, `Recibiendo answer… (${got}/${b.total})`);
+      await scanner.stop();
+      setStatus(false,"Procesando…");
 
-    if (got === b.total) {
-      const fullPacked = assemble(b.arr);
-      log("HOST: answer completa recibida");
-      await pc.setRemoteDescription(unpack(fullPacked, "BATTLESHIP_ANSWER"));
-      log("HOST: answer aplicada, esperando conexión…");
-      setStatus(false, "Esperando conexión…");
-    }
-  });
-}
-
-// --- CLIENT flow ---
-async function clientFlow(){
-  roleEl.textContent = "Rol: CLIENTE";
-  setStatus(false, "Escanea QRs del host (offer)");
-  log("CLIENTE: creando RTCPeerConnection");
-
-  const pc = new RTCPeerConnection(pcConfig);
-  wireLogs(pc, "CLI");
-
-  pc.ondatachannel = (e) => {
-    const ch = e.channel;
-    ch.onopen = goGame;
-    ch.onmessage = (ev) => log("⬅ " + ev.data);
-  };
-
-  await startScanner(async (txt) => {
-    const c = parseChunk(txt);
-    if (!c || c.kind !== "OFFER") return;
-
-    if (!buckets.has(c.id)) buckets.set(c.id, { total: c.total, arr: Array(c.total).fill(null), kind: c.kind });
-    const b = buckets.get(c.id);
-    b.arr[c.idx - 1] = c.payload;
-
-    const got = b.arr.filter(Boolean).length;
-    setStatus(false, `Recibiendo offer… (${got}/${b.total})`);
-
-    if (got === b.total) {
-      const fullPacked = assemble(b.arr);
-      log("CLIENTE: offer completa recibida");
-
-      await pc.setRemoteDescription(unpack(fullPacked, "BATTLESHIP_OFFER"));
+      const offer = decompress(text.slice(6));
+      await pc.setRemoteDescription(offer);
       await pc.setLocalDescription(await pc.createAnswer());
-      setStatus(false, "Generando answer…");
-      await waitIceComplete(pc);
+      await new Promise(r=>pc.onicecandidate=e=>!e.candidate&&r());
 
-      const packedAnswer = pack("BATTLESHIP_ANSWER", pc.localDescription);
-      chunks = chunkify("ANSWER", packedAnswer, 360);
-      showChunk(0);
-
-      setStatus(false, "Host escanea tus QRs (answer)");
-      log(`CLIENTE: answer en ${chunks.length} QRs`);
+      showQR("ANSWER|"+compress(pc.localDescription));
+      setStatus(false,"Enseña este QR al host");
     }
-  });
-}
-
-// Hooks UI
-$("btnHost").onclick = () => hostFlow().catch(e => log("❌ HOST: " + (e?.message || e)));
-$("btnJoin").onclick = () => clientFlow().catch(e => log("❌ CLIENTE: " + (e?.message || e)));
-
-})();
+  );
+};
