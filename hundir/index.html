@@ -119,16 +119,21 @@
       background: rgba(0,0,0,.06);
     }
     #progress{ font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--muted); }
-    #qr{ width:100%; display:flex; justify-content:center; align-items:center; }
-    #qr img, #qr canvas{
-      width: min(92vw, 420px);
-      height: auto;
-      display:block;
-      background:#fff;
-      padding: var(--qrPad);
-      box-sizing: content-box; /* ← para no recortar quiet zone */
-      border-radius: 14px;
+    #qr {
+      width: 100%;
+      display: flex;
+      justify-content: center;
     }
+    
+    #qr img {
+      width: min(90vw, 420px);
+      height: auto;
+      background: white;
+      padding: 16px;
+      box-sizing: content-box;
+    }
+    
+    
     .row{ display:flex; gap:10px; width:100%; flex-wrap:wrap; justify-content:center; }
     .row button{ flex:1; min-width: 140px; }
 
