@@ -1,25 +1,135 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
-  <!-- ✅ QR generator -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<title>Hundir la flota · LAN</title>
 
-  <!-- ✅ QR reader -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#0b1020; --fg:#fff; --muted:#9aa3b2;
+  --card:#141a2e; --line:#2a3150;
+  --good:#29d38a; --bad:#ff5a6a;
+}
+html[data-theme="light"]{
+  --bg:#f4f6ff; --fg:#0b1020; --muted:#555;
+  --card:#fff; --line:#ddd;
+}
+body{
+  margin:0; font-family:system-ui;
+  background:var(--bg); color:var(--fg);
+}
+.wrap{max-width:720px;margin:auto;padding:16px}
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:14px;
+}
+button{
+  width:100%; padding:14px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--fg);
+  font-size:16px;
+}
+#qr img{
+  width:min(90vw,360px);
+  background:#fff;
+  padding:16px;
+  border-radius:12px;
+}
+video{
+  width:100%;
+  border-radius:14px;
+  background:#000;
+}
+.ok{color:var(--good)}
+.bad{color:var(--bad)}
+</style>
 
-  <!-- ✅ Compresión -->
-  <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+<!-- GENERAR QR -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<!-- LEER QR (FIABLE) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+
 </head>
-
 <body>
 
-  <div id="qr"></div>
-  <div id="reader"></div>
+<div class="wrap">
 
-  <!-- ⚠️ SIEMPRE AL FINAL -->
-  <script src="apps.js"></script>
+  <div class="card">
+    <strong>Hundir la flota</strong><br>
+    Estado: <span id="status" class="bad">Idle</span>
+    <button id="themeBtn">🌙 / ☀️</button>
+  </div>
+
+  <div class="card">
+    <button id="btnGen">Generar QR</button>
+  </div>
+
+  <div class="card" style="text-align:center">
+    <div id="qr"></div>
+  </div>
+
+  <div class="card">
+    <div id="reader"></div>
+    <button id="btnCam">Abrir cámara</button>
+  </div>
+
+</div>
+
+<script>
+/* ========= DARK / LIGHT ========= */
+const KEY="theme";
+document.documentElement.dataset.theme =
+  localStorage.getItem(KEY) || "dark";
+
+document.getElementById("themeBtn").onclick = () => {
+  const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = t;
+  localStorage.setItem(KEY,t);
+};
+
+/* ========= QR GENERATOR ========= */
+const qrEl = document.getElementById("qr");
+const statusEl = document.getElementById("status");
+
+document.getElementById("btnGen").onclick = () => {
+  qrEl.innerHTML = "";
+  new QRCode(qrEl,{
+    text: "HUNDIR-FLOTA|" + Date.now(),
+    width: 320,
+    height: 320,
+    correctLevel: QRCode.CorrectLevel.L
+  });
+  statusEl.textContent = "QR generado";
+  statusEl.className = "ok";
+};
+
+/* ========= QR SCANNER ========= */
+const scanner = new Html5Qrcode("reader");
+
+document.getElementById("btnCam").onclick = async () => {
+  statusEl.textContent = "Escaneando…";
+  statusEl.className = "bad";
+
+  await scanner.start(
+    { facingMode:"environment" },
+    { fps:10, qrbox:250 },
+    text => {
+      statusEl.textContent = "Leído: " + text;
+      statusEl.className = "ok";
+      scanner.stop();
+    },
+    err => {}
+  );
+};
+</script>
+
 </body>
 </html>
