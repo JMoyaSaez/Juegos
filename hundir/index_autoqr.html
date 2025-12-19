@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hundir la flota · LAN</title>
+
+<style>
+:root{
+  --bg:#0b1020; --fg:#fff; --muted:#9aa3b2;
+  --card:#141a2e; --line:#2a3150;
+  --good:#29d38a; --bad:#ff5a6a;
+  --sea:#0e3a5e; --ship:#7aa7ff; --hit:#ff5a6a; --miss:#7fd3ff;
+}
+html[data-theme="light"]{
+  --bg:#f4f6ff; --fg:#0b1020; --muted:#555;
+  --card:#fff; --line:#ddd;
+  --sea:#cfe8ff; --ship:#2b59ff; --hit:#d1354b; --miss:#5bb6ff;
+}
+body{margin:0;font-family:system-ui;background:var(--bg);color:var(--fg)}
+.wrap{max-width:720px;margin:auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px}
+button{width:100%;padding:14px;border-radius:14px;border:1px solid var(--line);background:transparent;color:var(--fg);font-size:16px}
+.small{color:var(--muted);font-size:13px}
+.ok{color:var(--good)} .bad{color:var(--bad)}
+.actions{display:grid;gap:10px}
+@media(min-width:520px){.actions{grid-template-columns:1fr 1fr}}
+
+.two{display:grid;gap:12px}
+@media(min-width:720px){.two{grid-template-columns:1fr 1fr}}
+
+.grid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-top:10px}
+.cell{
+  aspect-ratio:1/1;
+  background:var(--sea);
+  border-radius:6px;
+  position:relative;
+  overflow:hidden;
+  user-select:none;
+}
+
+/* Mar */
+@keyframes wave{0%{transform:translateY(0)}50%{transform:translateY(-1.6px)}100%{transform:translateY(0)}}
+.cell::after{
+  content:"";
+  position:absolute;
+  inset:-40%;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,.12), transparent 45%),
+    radial-gradient(circle at 70% 60%, rgba(255,255,255,.08), transparent 50%);
+  opacity:.55;
+  animation:wave 3s ease-in-out infinite;
+  pointer-events:none;
+}
+.cell:nth-child(3n)::after{animation-duration:3.4s;opacity:.45}
+.cell:nth-child(4n)::after{animation-duration:2.8s;opacity:.50}
+.cell:nth-child(5n)::after{animation-duration:3.7s;opacity:.40}
+
+.cell.ship{background:var(--ship)}
+.cell.hit{background:var(--hit)}
+.cell.miss{background:var(--miss)}
+.cell.hit::after,.cell.miss::after{display:none}
+.cell.ship::after{opacity:.25}
+
+#qr img{width:min(90vw,340px);background:#fff;padding:16px;border-radius:12px}
+
+.pill{display:inline-block;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:rgba(0,0,0,.06);font-size:12px;color:var(--muted)}
+hr{border:none;border-top:1px solid var(--line);margin:12px 0}
+.locked{opacity:.6;pointer-events:none}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+</head>
+
+<body>
+<div class="wrap">
+
+  <div class="card">
+    <header>
+      <div>
+        <strong>Hundir la flota</strong><br>
+        Estado: <span id="status" class="bad">Idle</span><br>
+        <span id="role" class="small">Rol: —</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="themeBtn" style="width:auto">🌙/☀️</button>
+        <button id="audioBtn" style="width:auto">🔊</button>
+      </div>
+    </header>
+    <div class="small" id="hint">Empareja con QR → coloca barcos → listo → dispara</div>
+  </div>
+
+  <!-- Pair -->
+  <div id="pairView">
+    <div class="card">
+      <div class="actions">
+        <button id="btnHost">Crear partida (Host)</button>
+        <button id="btnJoin">Unirse (Cliente)</button>
+      </div>
+    </div>
+
+    <div class="card" style="text-align:center">
+      <div id="qr"></div>
+      <div id="qrInfo" class="small"></div>
+    </div>
+
+    <div class="card">
+      <div id="reader"></div>
+      <button id="btnCam">Abrir cámara</button>
+      <div class="small">Tip: brillo al 100% en el móvil que muestra el QR.</div>
+    </div>
+  </div>
+
+  <!-- Game -->
+  <div id="gameView" style="display:none">
+    <div class="card">
+      <div class="two">
+        <div>
+          <div><strong>Tu flota</strong> <span id="youPill" class="pill"></span></div>
+          <div id="defBoard" class="grid"></div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button id="btnRandom" style="flex:1">🔄 Actualizar barcos</button>
+            <button id="btnReady"  style="flex:1">✅ Listo</button>
+          </div>
+        </div>
+
+        <div>
+          <div><strong>Disparos (enemigo)</strong> <span id="turnPill" class="pill"></span></div>
+          <div id="atkBoard" class="grid"></div>
+          <hr>
+          <button id="btnNewMatch">🆕 Nueva partida</button>
+          <div class="small">Cierra la conexión y borra el estado local. (Tema se conserva)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ================= THEME ================= */
+const THEME_KEY="battleship_theme_v2";
+document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) || "dark";
+themeBtn.onclick=()=>{
+  const t=document.documentElement.dataset.theme==="dark"?"light":"dark";
+  document.documentElement.dataset.theme=t; localStorage.setItem(THEME_KEY,t);
+};
+
+/* ================= AUDIO ================= */
+let audioCtx=null;
+function unlockAudio(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+}
+audioBtn.onclick=()=>{
+  unlockAudio();
+  if(audioCtx?.state==="suspended") audioCtx.resume();
+  beep(880,0.08,0.06);
+  setStatus(true,"Audio OK");
+};
+function beep(freq, dur=0.08, vol=0.06){
+  if(!audioCtx) return;
+  const o=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  o.type="square"; o.frequency.value=freq;
+  g.gain.value=vol;
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start();
+  setTimeout(()=>{o.stop();}, dur*1000);
+}
+function shotSound(){ beep(520,0.06,0.07); setTimeout(()=>beep(380,0.06,0.05),60); }
+function hitSound(){ beep(220,0.08,0.08); setTimeout(()=>beep(160,0.12,0.07),90); }
+function missSound(){ beep(740,0.05,0.04); }
+function sunkSound(){
+  beep(140,0.10,0.10);
+  setTimeout(()=>beep(110,0.14,0.10), 90);
+  setTimeout(()=>beep(85,0.18,0.10), 210);
+}
+
+/* ================= UI helpers ================= */
+const $=id=>document.getElementById(id);
+const statusEl=$("status"), roleEl=$("role"), hintEl=$("hint");
+function setStatus(ok,t){ statusEl.textContent=t; statusEl.className=ok?"ok":"bad"; }
+
+/* ================= COMPRESSION ================= */
+function u8ToB64url(u8){
+  let s=""; for(let i=0;i<u8.length;i++) s+=String.fromCharCode(u8[i]);
+  return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function b64urlToU8(b){
+  const b64=b.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((b.length+3)%4);
+  const bin=atob(b64);
+  const u8=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+  return u8;
+}
+function pack(obj){ return u8ToB64url(pako.deflate(JSON.stringify(obj), { level: 9 })); }
+function unpack(b64u){ return JSON.parse(pako.inflate(b64urlToU8(b64u), { to: "string" })); }
+
+// Más compacto para SDP (menos overhead que {type,sdp})
+function packSDP(desc){ return u8ToB64url(pako.deflate(JSON.stringify([desc.type, desc.sdp]), { level: 9 })); }
+function unpackSDP(b64u){
+  const [type, sdp] = JSON.parse(pako.inflate(b64urlToU8(b64u), { to: "string" }));
+  return { type, sdp };
+}
+)); }
+
+/* ================= PAIR (WebRTC) ================= */
+const pairView=$("pairView"), gameView=$("gameView");
+const qrEl=$("qr"), qrInfoEl=$("qrInfo");
+function showQR(text){
+  qrEl.innerHTML="";
+  new QRCode(qrEl,{text,width:320,height:320,correctLevel:QRCode.CorrectLevel.L});
+}
+const scanner=new Html5Qrcode("reader");
+let pc=null, dc=null;
+const cfg={iceServers:[]};
+
+function cleanupConnection(){
+  // 🔥 clave: evitar "zombies" que rompen la siguiente partida
+  try { scanner?.stop?.(); } catch {}
+  try { if(dc){ dc.onopen=dc.onmessage=dc.onclose=null; } } catch {}
+  try { if(pc){ pc.onicecandidate=pc.ondatachannel=null; } } catch {}
+  try { dc?.close(); } catch {}
+  try { pc?.close(); } catch {}
+  dc=null; pc=null;
+}
+
+function waitIceComplete(pc){
+  return new Promise(resolve=>{
+    if(pc.iceGatheringState==="complete") return resolve();
+    pc.addEventListener("icecandidate", e=>{ if(!e.candidate) resolve(); });
+    pc.addEventListener("icegatheringstatechange", ()=>{ if(pc.iceGatheringState==="complete") resolve(); });
+  });
+}
+function send(msg){
+  if(dc && dc.readyState==="open") dc.send(JSON.stringify(msg));
+}
+
+/* ================= GAME STATE + PERSISTENCE ================= */
+const STATE_KEY="battleship_state_v2";
+const SIZE=10;
+const SHIPS=[5,4,3,3,2];
+
+let state = {
+  gameId: null,
+  role: null,
+  connected: false,
+
+  locked: false,
+  youReady: false,
+  enemyReady: false,
+  turn: "HOST",          // HOST starts
+  pendingShot: null,
+
+  // boards
+  def: Array(SIZE*SIZE).fill(0),   // 0 empty, 1 ship, 2 hit, 3 miss
+  atk: Array(SIZE*SIZE).fill(0),   // 0 unknown, 2 hit, 3 miss
+  shipId: Array(SIZE*SIZE).fill(-1) // ship identity per cell
+};
+
+function save(){ localStorage.setItem(STATE_KEY, JSON.stringify(state)); }
+function load(){
+  const raw=localStorage.getItem(STATE_KEY);
+  if(!raw) return false;
+  try{ state = JSON.parse(raw); return true; }catch{ return false; }
+}
+function ensureStateShape(){
+  if(!state.def || state.def.length!==SIZE*SIZE) state.def = Array(SIZE*SIZE).fill(0);
+  if(!state.atk || state.atk.length!==SIZE*SIZE) state.atk = Array(SIZE*SIZE).fill(0);
+  if(!state.shipId || state.shipId.length!==SIZE*SIZE) state.shipId = Array(SIZE*SIZE).fill(-1);
+  if(!state.turn) state.turn = "HOST";
+  if(state.pendingShot===undefined) state.pendingShot = null;
+}
+
+/* ================= GAME UI ================= */
+const defBoard=$("defBoard"), atkBoard=$("atkBoard");
+const youPill=$("youPill"), turnPill=$("turnPill");
+
+function idx(r,c){ return r*SIZE+c; }
+
+function renderBoards(){
+  defBoard.innerHTML="";
+  state.def.forEach((v,i)=>{
+    const d=document.createElement("div");
+    d.className="cell" + (v===1?" ship":"") + (v===2?" hit":"") + (v===3?" miss":"");
+    defBoard.appendChild(d);
+  });
+
+  atkBoard.innerHTML="";
+  state.atk.forEach((v,i)=>{
+    const d=document.createElement("div");
+    d.className="cell" + (v===2?" hit":"") + (v===3?" miss":"");
+    d.onclick=()=>onShoot(i);
+    atkBoard.appendChild(d);
+  });
+
+  $("btnRandom").classList.toggle("locked", state.locked || state.youReady);
+  $("btnReady").classList.toggle("locked", state.youReady);
+
+  youPill.textContent = state.youReady ? "Listo ✅" : "Colocando…";
+  turnPill.textContent = (state.turn===state.role) ? "Tu turno" : "Turno rival";
+}
+
+function placeShips(){
+  state.def = Array(SIZE*SIZE).fill(0);
+  state.shipId = Array(SIZE*SIZE).fill(-1);
+
+  let shipCounter=0;
+
+  for(const len of SHIPS){
+    let placed=false;
+    while(!placed){
+      const horiz=Math.random()<0.5;
+      const r=Math.floor(Math.random()*SIZE);
+      const c=Math.floor(Math.random()*SIZE);
+
+      let ok=true;
+      for(let i=0;i<len;i++){
+        const rr=r+(horiz?0:i);
+        const cc=c+(horiz?i:0);
+        if(rr>=SIZE||cc>=SIZE||state.def[idx(rr,cc)]!==0){ ok=false; break; }
+      }
+
+      if(ok){
+        for(let i=0;i<len;i++){
+          const rr=r+(horiz?0:i);
+          const cc=c+(horiz?i:0);
+          const k=idx(rr,cc);
+          state.def[k]=1;
+          state.shipId[k]=shipCounter;
+        }
+        shipCounter++;
+        placed=true;
+      }
+    }
+  }
+  save(); renderBoards();
+}
+
+function isShipSunk(shipId){
+  for(let k=0;k<state.def.length;k++){
+    if(state.shipId[k]===shipId && state.def[k]===1) return false;
+  }
+  return true;
+}
+
+function applyShotOnDefense(i){
+  const wasShip = state.def[i]===1;
+  let sunk=false;
+  if(wasShip){
+    state.def[i]=2;
+    const sid = state.shipId[i];
+    if(sid>=0) sunk = isShipSunk(sid);
+    return {hit:true, sunk};
+  }
+  if(state.def[i]===0) state.def[i]=3;
+  return {hit:false, sunk:false};
+}
+
+function checkAllSunk(){
+  return state.def.every(v => v!==1);
+}
+
+/* ===== gameplay ===== */
+function onShoot(i){
+  if(!state.connected) return setStatus(false,"No conectado");
+  if(!state.youReady || !state.enemyReady) return setStatus(false,"Esperando que ambos estén listos");
+  if(state.turn !== state.role) return;
+  if(state.pendingShot !== null) return;
+  if(state.atk[i]===2 || state.atk[i]===3) return;
+
+  unlockAudio(); if(audioCtx?.state==="suspended") audioCtx.resume();
+  shotSound();
+
+  state.pendingShot = i;
+  save();
+
+  send({t:"shot", i});
+  setStatus(false,"Disparo enviado…");
+}
+
+function onMessage(msg){
+  if(msg.t==="ready"){
+    state.enemyReady = true;
+    save();
+    renderBoards();
+    setStatus(true,"Rival listo ✅");
+    return;
+  }
+
+  if(msg.t==="shot"){
+    const res = applyShotOnDefense(msg.i);
+    save();
+    renderBoards();
+
+    unlockAudio(); if(audioCtx?.state==="suspended") audioCtx.resume();
+    if(res.hit){
+      if(res.sunk) sunkSound(); else hitSound();
+    } else {
+      missSound();
+    }
+
+    send({t:"result", i: msg.i, hit: res.hit, sunk: res.sunk, win: checkAllSunk()});
+
+    // Turno alterno (simple)
+    state.turn = state.role;
+    save(); renderBoards();
+
+    if(checkAllSunk()){
+      setStatus(false,"Has perdido 😅");
+    }else{
+      setStatus(true,"Te han disparado. Tu turno.");
+    }
+    return;
+  }
+
+  if(msg.t==="result"){
+    const i = msg.i;
+    state.pendingShot = null;
+
+    state.atk[i] = msg.hit ? 2 : 3;
+
+    // turno alterno
+    state.turn = (state.role==="HOST") ? "CLIENT" : "HOST";
+    save();
+    renderBoards();
+
+    unlockAudio(); if(audioCtx?.state==="suspended") audioCtx.resume();
+    if(msg.hit){
+      if(msg.sunk) sunkSound(); else hitSound();
+    } else {
+      missSound();
+    }
+
+    if(msg.win){
+      setStatus(true,"¡Has ganado! 🎉");
+    }else{
+      setStatus(true, msg.hit ? (msg.sunk ? "¡HUNDIDO! Turno rival…" : "¡Tocado! Turno rival…") : "Agua… Turno rival…");
+    }
+    return;
+  }
+}
+
+/* ================= VIEW ================= */
+function enterGame(){
+  pairView.style.display="none";
+  gameView.style.display="block";
+  hintEl.textContent="Coloca barcos → Listo → dispara en el tablero enemigo";
+  renderBoards();
+}
+
+/* ================= RESET FLOW ================= */
+function resetForNewMatch(role){
+  cleanupConnection();
+
+  state = {
+    gameId: null,
+    role,
+    connected: false,
+    locked: false,
+    youReady: false,
+    enemyReady: false,
+    turn: "HOST",
+    pendingShot: null,
+    def: Array(SIZE*SIZE).fill(0),
+    atk: Array(SIZE*SIZE).fill(0),
+    shipId: Array(SIZE*SIZE).fill(-1)
+  };
+
+  save();
+  placeShips();
+  renderBoards();
+  roleEl.textContent = "Rol: " + role;
+  $("btnCam").textContent = "Abrir cámara";
+}
+
+/* ================= BUTTONS ================= */
+$("btnRandom").onclick=()=>{
+  if(state.locked || state.youReady) return;
+  placeShips();
+};
+$("btnReady").onclick=()=>{
+  if(state.youReady) return;
+  state.locked = true;
+  state.youReady = true;
+  save();
+  renderBoards();
+  setStatus(true,"Listo ✅");
+  send({t:"ready"});
+};
+
+$("btnNewMatch").onclick=()=>{
+  cleanupConnection();
+  localStorage.removeItem(STATE_KEY);
+  setStatus(false,"Nueva partida. Vuelve a emparejar.");
+  location.reload();
+};
+
+/* ================= PAIR ACTIONS ================= */
+$("btnHost").onclick=async()=>{
+  unlockAudio();
+
+  // ✅ limpieza + estado limpio
+  resetForNewMatch("HOST");
+
+  state.gameId = "G" + Math.random().toString(36).slice(2,6).toUpperCase();
+  state.turn = "HOST";
+  save();
+
+  setStatus(false,"Creando offer (1–5s)…");
+
+  pc=new RTCPeerConnection(cfg);
+  dc=pc.createDataChannel("game");
+
+  dc.onopen=()=>{
+    state.connected=true; save();
+    setStatus(true,"Conectado ✅");
+    enterGame();
+  };
+  dc.onmessage=(e)=>{ try{ onMessage(JSON.parse(e.data)); }catch{} };
+
+  await pc.setLocalDescription(await pc.createOffer());
+  await waitIceComplete(pc);
+
+  showQR(`OFFER|${state.gameId}|${packSDP(pc.localDescription)}`);
+  qrInfoEl.textContent = `QR OFFER (${state.gameId})`;
+  setStatus(false,"Cliente escanea el QR. Luego pulsa 📷 para escanear su ANSWER.");
+  $("btnCam").textContent = "📷 Escanear ANSWER";
+};
+
+$("btnJoin").onclick=async()=>{
+  unlockAudio();
+
+  // ✅ limpieza + estado limpio
+  resetForNewMatch("CLIENT");
+
+  setStatus(false,"Abriendo cámara…");
+  await startScan();
+};
+
+// Escáner: iniciar con gesto de usuario (botón o "Unirse")
+async function startScan(){
+  setStatus(false,"Escaneando…");
+  try{
+    await scanner.start(
+      {facingMode:"environment"},
+      {fps:10, qrbox:250},
+      async text=>{
+        try{ await scanner.stop(); }catch{}
+        await onQrText(text);
+      }
+    );
+  }catch(err){
+    setStatus(false,"No se pudo abrir la cámara. Revisa permisos y vuelve a intentarlo.");
+  }
+}
+
+async function onQrText(text){
+  if(text.startsWith("OFFER|")){
+    const parts=text.split("|");
+    const gameId=parts[1];
+    const offerPacked=parts.slice(2).join("|");
+
+    if(state.role!=="CLIENT"){
+      // si estabas en HOST, esto evita mezclar roles
+      resetForNewMatch("CLIENT");
+    }
+    state.gameId=gameId;
+    save();
+
+    setStatus(false,"Creando answer (1–5s)…");
+
+    const offer=unpackSDP(offerPacked);
+    pc=new RTCPeerConnection(cfg);
+
+    pc.ondatachannel=(e)=>{
+      dc=e.channel;
+      dc.onopen=()=>{
+        state.connected=true; save();
+        setStatus(true,"Conectado ✅");
+        enterGame();
+      };
+      dc.onmessage=(ev)=>{ try{ onMessage(JSON.parse(ev.data)); }catch{} };
+    };
+
+    await pc.setRemoteDescription(offer);
+    await pc.setLocalDescription(await pc.createAnswer());
+    await waitIceComplete(pc);
+
+    showQR(`ANSWER|${state.gameId}|${packSDP(pc.localDescription)}`);
+    qrInfoEl.textContent = `QR ANSWER (${state.gameId})`;
+    setStatus(false,"Enseña este QR al host");
+    return;
+  }
+
+  if(text.startsWith("ANSWER|")){
+    if(!pc){
+      setStatus(false,"Primero crea partida en este dispositivo (HOST).");
+      return;
+    }
+    const parts=text.split("|");
+    const gameId=parts[1];
+    const answerPacked=parts.slice(2).join("|");
+
+    if(state.gameId && gameId !== state.gameId){
+      setStatus(false,"Este ANSWER no corresponde a tu partida.");
+      return;
+    }
+
+    const answer=unpackSDP(answerPacked);
+    await pc.setRemoteDescription(answer);
+    setStatus(false,"Conectando…");
+    return;
+  }
+
+  setStatus(false,"QR no reconocido");
+}
+
+$("btnCam").onclick=startScan;
+
+/* ================= LOAD ================= */
+if(load()){
+  ensureStateShape();
+  roleEl.textContent = "Rol: " + (state.role || "—");
+  renderBoards();
+  setStatus(false,"Estado recuperado. Para jugar online, re-empareja.");
+} else {
+  // first time
+  state.role = null;
+  save();
+  placeShips();
+}
+</script>
+
+</body>
+</html>
