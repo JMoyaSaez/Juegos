@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Hundir la flota · LAN</title>
+<title>Hundir la flota · Emparejar</title>
 
 <style>
 :root{
@@ -16,40 +16,13 @@ html[data-theme="light"]{
   --bg:#f4f6ff; --fg:#0b1020; --muted:#555;
   --card:#fff; --line:#ddd;
 }
-body{
-  margin:0; font-family:system-ui;
-  background:var(--bg); color:var(--fg);
-}
+body{margin:0;font-family:system-ui;background:var(--bg);color:var(--fg)}
 .wrap{max-width:720px;margin:auto;padding:16px}
-.card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  padding:14px;
-  margin-bottom:14px;
-}
-button{
-  width:100%; padding:14px;
-  border-radius:14px;
-  border:1px solid var(--line);
-  background:transparent;
-  color:var(--fg);
-  font-size:16px;
-}
-#qr img{
-  width:min(90vw,360px);
-  background:#fff;
-  padding:16px;
-  border-radius:12px;
-}
-video{
-  width:100%;
-  border-radius:14px;
-  background:#000;
-}
-.ok{color:var(--good)}
-.bad{color:var(--bad)}
-.small{font-size:13px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+button{width:100%;padding:14px;border-radius:14px;border:1px solid var(--line);background:transparent;color:var(--fg);font-size:16px}
+#qr img{width:min(90vw,340px);background:#fff;padding:16px;border-radius:12px}
+video{width:100%;border-radius:14px;background:#000}
+.ok{color:var(--good)} .bad{color:var(--bad)} .small{color:var(--muted);font-size:13px}
 </style>
 
 <!-- QR generator -->
@@ -62,7 +35,6 @@ video{
 
 <div class="wrap">
 
-  <!-- HEADER -->
   <div class="card">
     <strong>Hundir la flota</strong><br>
     Estado: <span id="status" class="bad">Idle</span><br>
@@ -70,19 +42,16 @@ video{
     <button id="themeBtn" style="margin-top:8px">🌙 / ☀️</button>
   </div>
 
-  <!-- ACTIONS -->
   <div class="card">
     <button id="btnHost">Crear partida (Host)</button>
     <button id="btnJoin" style="margin-top:8px">Unirse a partida</button>
   </div>
 
-  <!-- QR -->
   <div class="card" style="text-align:center">
     <div id="qr"></div>
     <div id="qrInfo" class="small"></div>
   </div>
 
-  <!-- CAMERA -->
   <div class="card">
     <div id="reader"></div>
     <button id="btnCam">Abrir cámara</button>
@@ -91,84 +60,97 @@ video{
 </div>
 
 <script>
-/* ===== Dark / Light ===== */
+/* ================= THEME ================= */
 const KEY="theme";
-document.documentElement.dataset.theme =
-  localStorage.getItem(KEY) || "dark";
-
+document.documentElement.dataset.theme = localStorage.getItem(KEY) || "dark";
 document.getElementById("themeBtn").onclick = () => {
-  const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-  document.documentElement.dataset.theme = t;
-  localStorage.setItem(KEY,t);
+  const t = document.documentElement.dataset.theme==="dark"?"light":"dark";
+  document.documentElement.dataset.theme=t; localStorage.setItem(KEY,t);
 };
 
-/* ===== Helpers ===== */
+/* ================= HELPERS ================= */
 const $ = id => document.getElementById(id);
-const statusEl = $("status");
-const roleEl = $("role");
-const qrEl = $("qr");
-const qrInfoEl = $("qrInfo");
+const statusEl=$("status"), roleEl=$("role"), qrEl=$("qr"), qrInfoEl=$("qrInfo");
+const setStatus=(ok,t)=>{statusEl.textContent=t;statusEl.className=ok?"ok":"bad";};
 
-function setStatus(ok, text){
-  statusEl.textContent = text;
-  statusEl.className = ok ? "ok" : "bad";
-}
-
-/* ===== ID de partida ===== */
-function newGameId(){
-  return Math.random().toString(36).slice(2,8).toUpperCase();
-}
-
-/* ===== QR Generator ===== */
+/* ================= QR ================= */
 function showQR(text){
-  qrEl.innerHTML = "";
-  new QRCode(qrEl,{
-    text,
-    width: 320,
-    height: 320,
-    correctLevel: QRCode.CorrectLevel.L
+  qrEl.innerHTML="";
+  new QRCode(qrEl,{text,width:320,height:320,correctLevel:QRCode.CorrectLevel.L});
+}
+
+/* ================= WEBRTC ================= */
+let pc, dc;
+const cfg={iceServers:[]};
+
+function waitIce(pc){
+  return new Promise(r=>{
+    if(pc.iceGatheringState==="complete") r();
+    pc.onicecandidate=e=>!e.candidate&&r();
   });
 }
 
-/* ===== HTML5 QR Reader ===== */
-const scanner = new Html5Qrcode("reader");
+/* ================= SCANNER ================= */
+const scanner=new Html5Qrcode("reader");
 
-/* ===== HOST ===== */
-$("btnHost").onclick = () => {
-  const gameId = newGameId();
-  const payload = `BATTLESHIP|HOST|${gameId}`;
+/* ================= HOST ================= */
+$("btnHost").onclick=async()=>{
+  roleEl.textContent="Rol: HOST";
+  setStatus(false,"Creando offer…");
 
-  showQR(payload);
-  roleEl.textContent = "Rol: HOST";
-  qrInfoEl.textContent = `ID partida: ${gameId}`;
-  setStatus(true, "Esperando jugador…");
+  pc=new RTCPeerConnection(cfg);
+  dc=pc.createDataChannel("game");
+  dc.onopen=()=>goGame();
+
+  await pc.setLocalDescription(await pc.createOffer());
+  await waitIce(pc);
+
+  showQR("OFFER|"+btoa(JSON.stringify(pc.localDescription)));
+  setStatus(false,"Cliente escanea el QR");
 };
 
-/* ===== CLIENT ===== */
-$("btnJoin").onclick = () => {
-  roleEl.textContent = "Rol: CLIENTE";
-  setStatus(false, "Escanea el QR del host");
+/* ================= CLIENT ================= */
+$("btnJoin").onclick=()=>{
+  roleEl.textContent="Rol: CLIENTE";
+  setStatus(false,"Escanea el QR del host");
 };
 
-/* ===== CAMERA ===== */
-$("btnCam").onclick = async () => {
-  setStatus(false, "Escaneando…");
-
+$("btnCam").onclick=async()=>{
+  setStatus(false,"Escaneando…");
   await scanner.start(
-    { facingMode:"environment" },
-    { fps:10, qrbox:250 },
-    text => {
-      if(!text.startsWith("BATTLESHIP|HOST|")) return;
-
-      const [, , gameId] = text.split("|");
+    {facingMode:"environment"},
+    {fps:10,qrbox:250},
+    async text=>{
       scanner.stop();
 
-      roleEl.textContent = "Rol: CLIENTE";
-      setStatus(true, `Unido a la partida ${gameId}`);
-      qrInfoEl.textContent = `ID partida: ${gameId}`;
+      /* CLIENT recibe OFFER */
+      if(text.startsWith("OFFER|")){
+        const offer=JSON.parse(atob(text.slice(6)));
+        pc=new RTCPeerConnection(cfg);
+        pc.ondatachannel=e=>{dc=e.channel;dc.onopen=()=>goGame();};
+
+        await pc.setRemoteDescription(offer);
+        await pc.setLocalDescription(await pc.createAnswer());
+        await waitIce(pc);
+
+        showQR("ANSWER|"+btoa(JSON.stringify(pc.localDescription)));
+        setStatus(false,"Enseña este QR al host");
+      }
+
+      /* HOST recibe ANSWER */
+      if(text.startsWith("ANSWER|")){
+        const answer=JSON.parse(atob(text.slice(7)));
+        await pc.setRemoteDescription(answer);
+        setStatus(false,"Conectando…");
+      }
     }
   );
 };
+
+function goGame(){
+  setStatus(true,"Conectado");
+  setTimeout(()=>location.href="game.html",500);
+}
 </script>
 
 </body>
