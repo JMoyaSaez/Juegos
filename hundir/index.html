@@ -3,7 +3,6 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-
 <title>Hundir la flota · Emparejar</title>
 
 <style>
@@ -27,8 +26,10 @@ video{width:100%;border-radius:14px;background:#000}
 
 <!-- QR generator -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<!-- QR reader -->
+<!-- QR reader (fiable) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<!-- ✅ compresión -->
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
 
 </head>
 <body>
@@ -72,84 +73,127 @@ document.getElementById("themeBtn").onclick = () => {
 const $ = id => document.getElementById(id);
 const statusEl=$("status"), roleEl=$("role"), qrEl=$("qr"), qrInfoEl=$("qrInfo");
 const setStatus=(ok,t)=>{statusEl.textContent=t;statusEl.className=ok?"ok":"bad";};
-
-/* ================= QR ================= */
 function showQR(text){
   qrEl.innerHTML="";
   new QRCode(qrEl,{text,width:320,height:320,correctLevel:QRCode.CorrectLevel.L});
 }
 
+/* ================= COMPRESSION (pako + base64url) ================= */
+function u8ToB64url(u8){
+  let s=""; for(let i=0;i<u8.length;i++) s+=String.fromCharCode(u8[i]);
+  return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function b64urlToU8(b){
+  const b64=b.replace(/-/g,"+").replace(/_/g,"/") + "===".slice((b.length+3)%4);
+  const bin=atob(b64);
+  const u8=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+  return u8;
+}
+function pack(obj){
+  const json = JSON.stringify(obj);
+  const def  = pako.deflate(json);
+  return u8ToB64url(def);
+}
+function unpack(b64u){
+  const u8 = b64urlToU8(b64u);
+  const json = pako.inflate(u8,{to:"string"});
+  return JSON.parse(json);
+}
+
 /* ================= WEBRTC ================= */
 let pc, dc;
-const cfg={iceServers:[]};
+const cfg = { iceServers: [] };
 
-function waitIce(pc){
-  return new Promise(r=>{
-    if(pc.iceGatheringState==="complete") r();
-    pc.onicecandidate=e=>!e.candidate&&r();
+function waitIceComplete(pc){
+  return new Promise(resolve=>{
+    if (pc.iceGatheringState==="complete") return resolve();
+    pc.addEventListener("icecandidate", e => { if(!e.candidate) resolve(); }, { once:false });
+    pc.addEventListener("icegatheringstatechange", () => {
+      if(pc.iceGatheringState==="complete") resolve();
+    });
   });
 }
 
 /* ================= SCANNER ================= */
-const scanner=new Html5Qrcode("reader");
+const scanner = new Html5Qrcode("reader");
 
 /* ================= HOST ================= */
-$("btnHost").onclick=async()=>{
+$("btnHost").onclick = async ()=>{
   roleEl.textContent="Rol: HOST";
-  setStatus(false,"Creando offer…");
+  setStatus(false,"Creando offer (espera 1–5s)…");
 
-  pc=new RTCPeerConnection(cfg);
-  dc=pc.createDataChannel("game");
-  dc.onopen=()=>goGame();
+  pc = new RTCPeerConnection(cfg);
+  dc = pc.createDataChannel("game");
+  dc.onopen = ()=>goGame();
 
   await pc.setLocalDescription(await pc.createOffer());
-  await waitIce(pc);
+  await waitIceComplete(pc);
 
-  showQR("OFFER|"+btoa(JSON.stringify(pc.localDescription)));
+  const payload = pack(pc.localDescription);
+  showQR("OFFER|" + payload);
+  qrInfoEl.textContent = "QR de oferta (OFFER)";
   setStatus(false,"Cliente escanea el QR");
 };
 
 /* ================= CLIENT ================= */
-$("btnJoin").onclick=()=>{
+$("btnJoin").onclick = ()=>{
   roleEl.textContent="Rol: CLIENTE";
   setStatus(false,"Escanea el QR del host");
 };
 
-$("btnCam").onclick=async()=>{
+$("btnCam").onclick = async ()=>{
   setStatus(false,"Escaneando…");
-  await scanner.start(
-    {facingMode:"environment"},
-    {fps:10,qrbox:250},
-    async text=>{
-      scanner.stop();
 
-      /* CLIENT recibe OFFER */
+  await scanner.start(
+    { facingMode:"environment" },
+    { fps:10, qrbox:250 },
+    async text=>{
+      // IMPORTANTE: parar cámara en cuanto leemos
+      await scanner.stop();
+
+      // CLIENT recibe OFFER
       if(text.startsWith("OFFER|")){
-        const offer=JSON.parse(atob(text.slice(6)));
-        pc=new RTCPeerConnection(cfg);
-        pc.ondatachannel=e=>{dc=e.channel;dc.onopen=()=>goGame();};
+        roleEl.textContent="Rol: CLIENTE";
+        setStatus(false,"Generando answer (espera 1–5s)…");
+
+        const offer = unpack(text.slice(6));
+
+        pc = new RTCPeerConnection(cfg);
+        pc.ondatachannel = e => { dc=e.channel; dc.onopen=()=>goGame(); };
 
         await pc.setRemoteDescription(offer);
         await pc.setLocalDescription(await pc.createAnswer());
-        await waitIce(pc);
+        await waitIceComplete(pc);
 
-        showQR("ANSWER|"+btoa(JSON.stringify(pc.localDescription)));
+        const payload = pack(pc.localDescription);
+        showQR("ANSWER|" + payload);
+        qrInfoEl.textContent = "QR de respuesta (ANSWER)";
         setStatus(false,"Enseña este QR al host");
+        return;
       }
 
-      /* HOST recibe ANSWER */
+      // HOST recibe ANSWER (el host también puede pulsar cámara y escanear)
       if(text.startsWith("ANSWER|")){
-        const answer=JSON.parse(atob(text.slice(7)));
+        if(!pc){
+          setStatus(false,"Primero crea partida en este dispositivo (HOST).");
+          return;
+        }
+        const answer = unpack(text.slice(7));
         await pc.setRemoteDescription(answer);
+        qrInfoEl.textContent = "Answer aplicada";
         setStatus(false,"Conectando…");
+        return;
       }
+
+      setStatus(false,"QR no reconocido");
     }
   );
 };
 
 function goGame(){
-  setStatus(true,"Conectado");
-  setTimeout(()=>location.href="game.html",500);
+  setStatus(true,"Conectado ✅");
+  setTimeout(()=>location.href="game.html", 400);
 }
 </script>
 
