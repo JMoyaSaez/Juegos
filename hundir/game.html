@@ -3,17 +3,203 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+
 <title>Hundir la flota · Juego</title>
+
 <style>
-body{margin:0;font-family:system-ui;background:#0b1020;color:#fff;
-display:grid;place-items:center;height:100vh}
-.card{border:1px solid #2a3150;border-radius:16px;padding:20px}
+:root{
+  --bg:#0b1020; --fg:#fff; --muted:#9aa3b2;
+  --card:#141a2e; --line:#2a3150;
+  --sea:#0e3a5e; --ship:#7aa7ff;
+  --hit:#ff5a6a; --miss:#7fd3ff;
+}
+html[data-theme="light"]{
+  --bg:#f4f6ff; --fg:#0b1020; --muted:#555;
+  --card:#fff; --line:#ddd;
+  --sea:#cfe8ff; --ship:#2b59ff;
+  --hit:#d1354b; --miss:#5bb6ff;
+}
+body{
+  margin:0; font-family:system-ui;
+  background:var(--bg); color:var(--fg);
+}
+.wrap{max-width:420px;margin:auto;padding:14px}
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:14px;
+}
+header{
+  display:flex; justify-content:space-between; align-items:center;
+}
+button{
+  width:100%; padding:12px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--fg);
+  font-size:15px;
+}
+.grid{
+  display:grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap:4px;
+  margin-top:10px;
+}
+.cell{
+  aspect-ratio:1/1;
+  background:var(--sea);
+  border-radius:6px;
+  display:flex; align-items:center; justify-content:center;
+}
+.cell.ship{ background:var(--ship); }
+.cell.hit{ background:var(--hit); }
+.cell.miss{ background:var(--miss); }
+.small{font-size:12px;color:var(--muted)}
+.actions{display:flex;gap:8px;margin-top:10px}
+.actions button{flex:1}
+.locked{opacity:.6; pointer-events:none}
 </style>
 </head>
+
 <body>
+<div class="wrap">
+
   <div class="card">
-    <h2>Conectado ✅</h2>
-    <p>Aquí va el tablero del juego.</p>
+    <header>
+      <strong>Hundir la flota</strong>
+      <button id="themeBtn" style="width:auto">🌙 / ☀️</button>
+    </header>
+    <div class="small" id="status">Coloca tus barcos</div>
   </div>
+
+  <div class="card">
+    <div id="board" class="grid"></div>
+
+    <div class="actions">
+      <button id="btnRandom">🔄 Actualizar barcos</button>
+      <button id="btnReady">✅ Listo</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- 🔊 Sonidos -->
+<audio id="sndShot" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_6b97e6e87c.mp3"></audio>
+<audio id="sndHit"  src="https://cdn.pixabay.com/download/audio/2022/03/10/audio_5c8b8b3f14.mp3"></audio>
+<audio id="sndMiss" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_8e1c0cdd50.mp3"></audio>
+
+<script>
+/* ===== DARK / LIGHT ===== */
+const KEY="theme";
+document.documentElement.dataset.theme =
+  localStorage.getItem(KEY) || "dark";
+
+document.getElementById("themeBtn").onclick = ()=>{
+  const t=document.documentElement.dataset.theme==="dark"?"light":"dark";
+  document.documentElement.dataset.theme=t;
+  localStorage.setItem(KEY,t);
+};
+
+/* ===== BOARD ===== */
+const SIZE = 10;
+const SHIPS = [5,4,3,3,2]; // clásico
+const boardEl = document.getElementById("board");
+const statusEl = document.getElementById("status");
+
+let board = Array(SIZE*SIZE).fill(0);
+let locked = false;
+
+function idx(r,c){ return r*SIZE+c; }
+
+function render(){
+  boardEl.innerHTML="";
+  board.forEach((v,i)=>{
+    const d=document.createElement("div");
+    d.className="cell" + (v===1?" ship":"") + (v===2?" hit":"") + (v===3?" miss":"");
+    d.onclick=()=>onCell(i);
+    boardEl.appendChild(d);
+  });
+}
+
+function clearBoard(){
+  board.fill(0);
+}
+
+function placeShips(){
+  clearBoard();
+  for(const len of SHIPS){
+    let placed=false;
+    while(!placed){
+      const dir=Math.random()<0.5;
+      const r=Math.floor(Math.random()*SIZE);
+      const c=Math.floor(Math.random()*SIZE);
+      let ok=true;
+      for(let i=0;i<len;i++){
+        const rr=r+(dir?0:i);
+        const cc=c+(dir?i:0);
+        if(rr>=SIZE||cc>=SIZE||board[idx(rr,cc)]!==0){ ok=false; break; }
+      }
+      if(ok){
+        for(let i=0;i<len;i++){
+          const rr=r+(dir?0:i);
+          const cc=c+(dir?i:0);
+          board[idx(rr,cc)]=1;
+        }
+        placed=true;
+      }
+    }
+  }
+  render();
+}
+
+/* ===== INTERACTION ===== */
+function onCell(i){
+  if(!locked) return;
+  if(board[i]===2||board[i]===3) return;
+
+  play("shot");
+
+  if(board[i]===1){
+    board[i]=2;
+    play("hit");
+  }else{
+    board[i]=3;
+    play("miss");
+  }
+  render();
+}
+
+/* ===== BUTTONS ===== */
+document.getElementById("btnRandom").onclick=()=>{
+  if(locked) return;
+  placeShips();
+};
+
+document.getElementById("btnReady").onclick=()=>{
+  locked=true;
+  statusEl.textContent="Esperando disparos…";
+  boardEl.classList.remove("locked");
+};
+
+/* ===== SOUNDS ===== */
+const sounds={
+  shot:document.getElementById("sndShot"),
+  hit: document.getElementById("sndHit"),
+  miss:document.getElementById("sndMiss")
+};
+function play(k){
+  const a=sounds[k];
+  if(!a) return;
+  a.currentTime=0;
+  a.play();
+}
+
+/* INIT */
+placeShips();
+</script>
+
 </body>
 </html>
