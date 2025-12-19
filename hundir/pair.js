@@ -128,19 +128,16 @@ async function startScanner(onText){
     scanner = new QrScanner(
       video,
       (result) => {
-        const data = result?.data ?? result; // compatible
-        if (typeof data === "string") onText(data);
+        const text = typeof result === "string" ? result : result.data;
+        if (typeof text === "string" && text.length > 0) {
+          onText(text);
+        }
       },
       {
-        // CLAVE: algunos QRs salen “invertidos” o con contraste raro
         inversionMode: "both",
-        // Aumenta la probabilidad de captura
-        maxScansPerSecond: 20,
-        // Dibuja región, ayuda al usuario
+        maxScansPerSecond: 10,
         highlightScanRegion: true,
-        highlightCodeOutline: true,
-        // En muchos móviles mejora la tasa
-        returnDetailedScanResult: true,
+        highlightCodeOutline: true
       }
     );
   }
