@@ -13,11 +13,21 @@ const setStatus = (ok, t) => { statusEl.textContent = t; statusEl.className = ok
 
 function showChunk(i){
   if (!chunks.length) return;
-  chunkIndex = Math.max(0, Math.min(i, chunks.length-1));
+  chunkIndex = Math.max(0, Math.min(i, chunks.length - 1));
+
   qrEl.innerHTML = "";
+
   const size = Math.min(420, Math.floor(window.innerWidth * 0.92));
-  new QRCode(qrEl, { text: chunks[chunkIndex], width: size, height: size, correctLevel: QRCode.CorrectLevel.L });
-  progressEl.textContent = `QR ${chunkIndex+1}/${chunks.length}`;
+
+  new QRCode(qrEl, {
+    text: chunks[chunkIndex],
+    width: size,
+    height: size,
+    correctLevel: QRCode.CorrectLevel.L
+    // ⚠️ no margin aquí
+  });
+
+  progressEl.textContent = `QR ${chunkIndex + 1}/${chunks.length}`;
 }
 
 prevBtn.onclick = () => showChunk(chunkIndex-1);
