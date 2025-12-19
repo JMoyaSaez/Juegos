@@ -49,12 +49,12 @@ video{
 }
 .ok{color:var(--good)}
 .bad{color:var(--bad)}
+.small{font-size:13px;color:var(--muted)}
 </style>
 
-<!-- GENERAR QR -->
+<!-- QR generator -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-<!-- LEER QR (FIABLE) -->
+<!-- QR reader -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 
 </head>
@@ -62,20 +62,27 @@ video{
 
 <div class="wrap">
 
+  <!-- HEADER -->
   <div class="card">
     <strong>Hundir la flota</strong><br>
-    Estado: <span id="status" class="bad">Idle</span>
-    <button id="themeBtn">🌙 / ☀️</button>
+    Estado: <span id="status" class="bad">Idle</span><br>
+    <span id="role" class="small">Rol: —</span>
+    <button id="themeBtn" style="margin-top:8px">🌙 / ☀️</button>
   </div>
 
+  <!-- ACTIONS -->
   <div class="card">
-    <button id="btnGen">Generar QR</button>
+    <button id="btnHost">Crear partida (Host)</button>
+    <button id="btnJoin" style="margin-top:8px">Unirse a partida</button>
   </div>
 
+  <!-- QR -->
   <div class="card" style="text-align:center">
     <div id="qr"></div>
+    <div id="qrInfo" class="small"></div>
   </div>
 
+  <!-- CAMERA -->
   <div class="card">
     <div id="reader"></div>
     <button id="btnCam">Abrir cámara</button>
@@ -84,7 +91,7 @@ video{
 </div>
 
 <script>
-/* ========= DARK / LIGHT ========= */
+/* ===== Dark / Light ===== */
 const KEY="theme";
 document.documentElement.dataset.theme =
   localStorage.getItem(KEY) || "dark";
@@ -95,38 +102,71 @@ document.getElementById("themeBtn").onclick = () => {
   localStorage.setItem(KEY,t);
 };
 
-/* ========= QR GENERATOR ========= */
-const qrEl = document.getElementById("qr");
-const statusEl = document.getElementById("status");
+/* ===== Helpers ===== */
+const $ = id => document.getElementById(id);
+const statusEl = $("status");
+const roleEl = $("role");
+const qrEl = $("qr");
+const qrInfoEl = $("qrInfo");
 
-document.getElementById("btnGen").onclick = () => {
+function setStatus(ok, text){
+  statusEl.textContent = text;
+  statusEl.className = ok ? "ok" : "bad";
+}
+
+/* ===== ID de partida ===== */
+function newGameId(){
+  return Math.random().toString(36).slice(2,8).toUpperCase();
+}
+
+/* ===== QR Generator ===== */
+function showQR(text){
   qrEl.innerHTML = "";
   new QRCode(qrEl,{
-    text: "HUNDIR-FLOTA|" + Date.now(),
+    text,
     width: 320,
     height: 320,
     correctLevel: QRCode.CorrectLevel.L
   });
-  statusEl.textContent = "QR generado";
-  statusEl.className = "ok";
-};
+}
 
-/* ========= QR SCANNER ========= */
+/* ===== HTML5 QR Reader ===== */
 const scanner = new Html5Qrcode("reader");
 
-document.getElementById("btnCam").onclick = async () => {
-  statusEl.textContent = "Escaneando…";
-  statusEl.className = "bad";
+/* ===== HOST ===== */
+$("btnHost").onclick = () => {
+  const gameId = newGameId();
+  const payload = `BATTLESHIP|HOST|${gameId}`;
+
+  showQR(payload);
+  roleEl.textContent = "Rol: HOST";
+  qrInfoEl.textContent = `ID partida: ${gameId}`;
+  setStatus(true, "Esperando jugador…");
+};
+
+/* ===== CLIENT ===== */
+$("btnJoin").onclick = () => {
+  roleEl.textContent = "Rol: CLIENTE";
+  setStatus(false, "Escanea el QR del host");
+};
+
+/* ===== CAMERA ===== */
+$("btnCam").onclick = async () => {
+  setStatus(false, "Escaneando…");
 
   await scanner.start(
     { facingMode:"environment" },
     { fps:10, qrbox:250 },
     text => {
-      statusEl.textContent = "Leído: " + text;
-      statusEl.className = "ok";
+      if(!text.startsWith("BATTLESHIP|HOST|")) return;
+
+      const [, , gameId] = text.split("|");
       scanner.stop();
-    },
-    err => {}
+
+      roleEl.textContent = "Rol: CLIENTE";
+      setStatus(true, `Unido a la partida ${gameId}`);
+      qrInfoEl.textContent = `ID partida: ${gameId}`;
+    }
   );
 };
 </script>
