@@ -10,43 +10,88 @@
   --bg:#0b1020; --fg:#fff; --muted:#9aa3b2;
   --card:#141a2e; --line:#2a3150;
   --good:#29d38a; --bad:#ff5a6a;
-  --sea:#0e3a5e; --ship:#7aa7ff; --hit:#ff5a6a; --miss:#7fd3ff;
+  --sea:#0e3a5e; --ship:#7aa7ff;
+  --hit:#ff5a6a; --miss:#7fd3ff;
 }
 html[data-theme="light"]{
   --bg:#f4f6ff; --fg:#0b1020; --muted:#555;
   --card:#fff; --line:#ddd;
-  --sea:#cfe8ff; --ship:#2b59ff; --hit:#d1354b; --miss:#5bb6ff;
+  --sea:#cfe8ff; --ship:#2b59ff;
+  --hit:#d1354b; --miss:#5bb6ff;
 }
-body{margin:0;font-family:system-ui;background:var(--bg);color:var(--fg)}
+body{
+  margin:0; font-family:system-ui;
+  background:var(--bg); color:var(--fg);
+}
 .wrap{max-width:720px;margin:auto;padding:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
-header{display:flex;justify-content:space-between;align-items:center;gap:10px}
-button{width:100%;padding:14px;border-radius:14px;border:1px solid var(--line);background:transparent;color:var(--fg);font-size:16px}
-.small{color:var(--muted);font-size:13px}
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:14px;
+}
+header{display:flex;justify-content:space-between;align-items:center}
+button{
+  width:100%; padding:14px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--fg);
+  font-size:16px;
+}
+.small{font-size:13px;color:var(--muted)}
 .ok{color:var(--good)} .bad{color:var(--bad)}
-#qr img{width:min(90vw,340px);background:#fff;padding:16px;border-radius:12px}
 
-.actions{display:grid;gap:10px}
-@media(min-width:520px){.actions{grid-template-columns:1fr 1fr}}
-
-.two{display:grid;gap:12px}
-@media(min-width:720px){.two{grid-template-columns:1fr 1fr}}
-
-.grid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-top:10px}
-.cell{aspect-ratio:1/1;background:var(--sea);border-radius:6px;display:flex;align-items:center;justify-content:center;user-select:none}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(10,1fr);
+  gap:4px;
+  margin-top:10px;
+}
+.cell{
+  aspect-ratio:1/1;
+  background:var(--sea);
+  border-radius:6px;
+  position:relative;
+  overflow:hidden;
+}
 .cell.ship{background:var(--ship)}
 .cell.hit{background:var(--hit)}
 .cell.miss{background:var(--miss)}
-.locked{opacity:.65;pointer-events:none}
-.pill{display:inline-block;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:rgba(0,0,0,.06);font-size:12px;color:var(--muted)}
-hr{border:none;border-top:1px solid var(--line);margin:12px 0}
+
+@keyframes wave {
+  0%{transform:translateY(0)}
+  50%{transform:translateY(-1.6px)}
+  100%{transform:translateY(0)}
+}
+.cell::after{
+  content:"";
+  position:absolute;
+  inset:-40%;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,.12), transparent 45%),
+    radial-gradient(circle at 70% 60%, rgba(255,255,255,.08), transparent 50%);
+  opacity:.55;
+  animation:wave 3s ease-in-out infinite;
+}
+.cell:nth-child(3n)::after{animation-duration:3.4s}
+.cell:nth-child(4n)::after{animation-duration:2.8s}
+.cell.hit::after,
+.cell.miss::after{display:none}
+.cell.ship::after{opacity:.25}
+
+.two{
+  display:grid; gap:12px;
+}
+@media(min-width:720px){
+  .two{grid-template-columns:1fr 1fr}
+}
+.locked{opacity:.6;pointer-events:none}
 </style>
 
-<!-- QR generator -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<!-- QR reader -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-<!-- compression -->
 <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
 
 </head>
@@ -54,492 +99,157 @@ hr{border:none;border-top:1px solid var(--line);margin:12px 0}
 
 <div class="wrap">
 
-  <div class="card">
-    <header>
-      <div>
-        <strong>Hundir la flota</strong><br>
-        Estado: <span id="status" class="bad">Idle</span><br>
-        <span id="role" class="small">Rol: —</span>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button id="themeBtn" style="width:auto">🌙/☀️</button>
-        <button id="audioBtn" style="width:auto">🔊</button>
-      </div>
-    </header>
-    <div class="small" id="hint">1) Empareja con QR · 2) Coloca barcos · 3) A jugar</div>
-  </div>
-
-  <!-- PAIR VIEW -->
-  <div id="pairView">
-    <div class="card">
-      <div class="actions">
-        <button id="btnHost">Crear partida (Host)</button>
-        <button id="btnJoin">Unirse a partida</button>
-      </div>
+<div class="card">
+  <header>
+    <div>
+      <strong>Hundir la flota</strong><br>
+      Estado: <span id="status" class="bad">Idle</span><br>
+      <span id="role" class="small">Rol: —</span>
     </div>
-
-    <div class="card" style="text-align:center">
-      <div id="qr"></div>
-      <div id="qrInfo" class="small"></div>
+    <div style="display:flex;gap:8px">
+      <button id="themeBtn" style="width:auto">🌙/☀️</button>
+      <button id="audioBtn" style="width:auto">🔊</button>
     </div>
+  </header>
+</div>
 
-    <div class="card">
-      <div id="reader"></div>
-      <button id="btnCam">Abrir cámara</button>
-      <div class="small">Tip: brillo al 100% en el móvil que muestra el QR.</div>
+<div id="pairView" class="card">
+  <button id="btnHost">Crear partida (Host)</button>
+  <button id="btnJoin" style="margin-top:8px">Unirse</button>
+  <div id="qr" style="text-align:center;margin-top:10px"></div>
+  <div id="reader"></div>
+  <button id="btnCam">Abrir cámara</button>
+</div>
+
+<div id="gameView" class="card" style="display:none">
+  <div class="two">
+    <div>
+      <strong>Tu flota</strong>
+      <div id="defBoard" class="grid"></div>
+      <button id="btnRandom">🔄 Cambiar barcos</button>
+      <button id="btnReady">✅ Listo</button>
     </div>
-  </div>
-
-  <!-- GAME VIEW -->
-  <div id="gameView" style="display:none">
-    <div class="card">
-      <div class="two">
-        <div>
-          <div><strong>Tu flota</strong> <span id="youPill" class="pill"></span></div>
-          <div id="defBoard" class="grid"></div>
-          <div style="display:flex;gap:8px;margin-top:10px">
-            <button id="btnRandom" style="flex:1">🔄 Actualizar barcos</button>
-            <button id="btnReady"  style="flex:1">✅ Listo</button>
-          </div>
-        </div>
-
-        <div>
-          <div><strong>Disparos (enemigo)</strong> <span id="turnPill" class="pill"></span></div>
-          <div id="atkBoard" class="grid"></div>
-          <hr>
-          <button id="btnReset">🧹 Reiniciar partida (local)</button>
-          <div class="small">Si refrescas, se guarda el estado. Si pierdes conexión, re-emparejas.</div>
-        </div>
-      </div>
+    <div>
+      <strong>Disparos</strong>
+      <div id="atkBoard" class="grid"></div>
     </div>
   </div>
+</div>
 
 </div>
 
 <script>
-/* ================= THEME ================= */
-const THEME_KEY="battleship_theme_v1";
-document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) || "dark";
+/* ========= TEMA ========= */
+const THEME="theme";
+document.documentElement.dataset.theme=localStorage.getItem(THEME)||"dark";
 themeBtn.onclick=()=>{
   const t=document.documentElement.dataset.theme==="dark"?"light":"dark";
-  document.documentElement.dataset.theme=t; localStorage.setItem(THEME_KEY,t);
+  document.documentElement.dataset.theme=t;localStorage.setItem(THEME,t);
 };
 
-/* ================= AUDIO (works on mobile) ================= */
-let audioCtx=null;
-function unlockAudio(){
-  if(audioCtx) return;
-  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-}
+/* ========= AUDIO ========= */
+let audioCtx;
 audioBtn.onclick=()=>{
-  unlockAudio();
-  if(audioCtx?.state==="suspended") audioCtx.resume();
-  beep(880,0.08,0.06); // little “ready”
-  setStatus(true,"Audio OK");
+  audioCtx=new (window.AudioContext||webkitAudioContext)();
+  beep(800,.08,.06);
 };
-function beep(freq, dur=0.08, vol=0.06){
+function beep(f,d,v){
   if(!audioCtx) return;
-  const o=audioCtx.createOscillator();
-  const g=audioCtx.createGain();
-  o.type="square"; o.frequency.value=freq;
-  g.gain.value=vol;
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.frequency.value=f; g.gain.value=v;
   o.connect(g); g.connect(audioCtx.destination);
-  o.start();
-  setTimeout(()=>{o.stop();}, dur*1000);
+  o.start(); setTimeout(()=>o.stop(),d*1000);
 }
-function shotSound(){ beep(520,0.06,0.07); beep(380,0.06,0.05); }
-function hitSound(){ beep(220,0.08,0.08); beep(160,0.12,0.07); }
-function missSound(){ beep(740,0.05,0.04); }
-
-/* ================= UI helpers ================= */
-const $=id=>document.getElementById(id);
-const statusEl=$("status"), roleEl=$("role"), hintEl=$("hint");
-function setStatus(ok,t){ statusEl.textContent=t; statusEl.className=ok?"ok":"bad"; }
-
-/* ================= COMPRESSION (pako + base64url) ================= */
-function u8ToB64url(u8){ let s=""; for(let i=0;i<u8.length;i++) s+=String.fromCharCode(u8[i]);
-  return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-}
-function b64urlToU8(b){ const b64=b.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((b.length+3)%4);
-  const bin=atob(b64); const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); return u8;
-}
-function pack(obj){ return u8ToB64url(pako.deflate(JSON.stringify(obj))); }
-function unpack(b64u){ return JSON.parse(pako.inflate(b64urlToU8(b64u),{to:"string"})); }
-
-/* ================= PAIR (WebRTC) ================= */
-const qrEl=$("qr"), qrInfoEl=$("qrInfo");
-function showQR(text){
-  qrEl.innerHTML="";
-  new QRCode(qrEl,{text,width:320,height:320,correctLevel:QRCode.CorrectLevel.L});
-}
-const scanner=new Html5Qrcode("reader");
-let pc=null, dc=null;
-let myRole="—";
-const cfg={iceServers:[]};
-function waitIceComplete(pc){
-  return new Promise(resolve=>{
-    if(pc.iceGatheringState==="complete") return resolve();
-    pc.addEventListener("icecandidate", e=>{ if(!e.candidate) resolve(); });
-    pc.addEventListener("icegatheringstatechange", ()=>{ if(pc.iceGatheringState==="complete") resolve(); });
-  });
-}
-function send(msg){
-  if(dc && dc.readyState==="open") dc.send(JSON.stringify(msg));
+function hitSound(){beep(220,.08,.08)}
+function missSound(){beep(700,.05,.05)}
+function sunkSound(){
+  beep(140,.1,.1);
+  setTimeout(()=>beep(110,.14,.1),90);
+  setTimeout(()=>beep(85,.18,.1),210);
 }
 
-/* ================= GAME STATE + PERSISTENCE ================= */
-const STATE_KEY="battleship_state_v1";
-const SIZE=10;
-const SHIPS=[5,4,3,3,2];
-
-let state = {
-  gameId: null,
-  role: null,
-  connected: false,
-
-  // setup
-  locked: false,
-  youReady: false,
-  enemyReady: false,
-  turn: null, // "HOST" or "CLIENT"
-
-  // boards
-  // defense: 0 empty, 1 ship, 2 hit, 3 miss
-  def: Array(SIZE*SIZE).fill(0),
-  // attack: 0 unknown, 2 hit, 3 miss
-  atk: Array(SIZE*SIZE).fill(0),
-
-  // last shot pending (waiting result)
-  pendingShot: null
+/* ========= ESTADO ========= */
+const SIZE=10, SHIPS=[5,4,3,3,2];
+let state={
+  def:Array(100).fill(0),
+  atk:Array(100).fill(0),
+  shipId:Array(100).fill(-1),
+  turn:true, // true = tu turno
+  ready:false
 };
 
-function save(){ localStorage.setItem(STATE_KEY, JSON.stringify(state)); }
-function load(){
-  const raw=localStorage.getItem(STATE_KEY);
-  if(!raw) return false;
-  try{ state = JSON.parse(raw); return true; }catch{ return false; }
-}
-function resetLocal(){
-  localStorage.removeItem(STATE_KEY);
-  location.reload();
-}
-
-/* ================= GAME UI ================= */
-const pairView=$("pairView"), gameView=$("gameView");
-const defBoard=$("defBoard"), atkBoard=$("atkBoard");
-const youPill=$("youPill"), turnPill=$("turnPill");
-
-function idx(r,c){ return r*SIZE+c; }
-
-function renderBoards(){
-  // defense board
-  defBoard.innerHTML="";
-  state.def.forEach((v,i)=>{
-    const d=document.createElement("div");
-    d.className="cell" + (v===1?" ship":"") + (v===2?" hit":"") + (v===3?" miss":"");
-    defBoard.appendChild(d);
-  });
-
-  // attack board (click to shoot)
-  atkBoard.innerHTML="";
-  state.atk.forEach((v,i)=>{
-    const d=document.createElement("div");
-    d.className="cell" + (v===2?" hit":"") + (v===3?" miss":"");
-    d.onclick=()=>onShoot(i);
-    atkBoard.appendChild(d);
-  });
-
-  // lock placement UI
-  $("btnRandom").classList.toggle("locked", state.locked);
-  $("btnReady").classList.toggle("locked", state.youReady);
-
-  youPill.textContent = state.youReady ? "Listo ✅" : "Colocando…";
-  turnPill.textContent = (state.turn===state.role) ? "Tu turno" : "Turno rival";
-}
+/* ========= TABLERO ========= */
+const defBoard=defBoardEl=document.getElementById("defBoard");
+const atkBoard=atkBoardEl=document.getElementById("atkBoard");
+function idx(r,c){return r*SIZE+c}
 
 function placeShips(){
-  state.def = Array(SIZE*SIZE).fill(0);
-
+  state.def.fill(0);
+  state.shipId.fill(-1);
+  let sid=0;
   for(const len of SHIPS){
-    let placed=false;
-    while(!placed){
-      const horiz=Math.random()<0.5;
+    let ok=false;
+    while(!ok){
+      const h=Math.random()<.5;
       const r=Math.floor(Math.random()*SIZE);
       const c=Math.floor(Math.random()*SIZE);
-      let ok=true;
+      ok=true;
       for(let i=0;i<len;i++){
-        const rr=r+(horiz?0:i);
-        const cc=c+(horiz?i:0);
-        if(rr>=SIZE||cc>=SIZE||state.def[idx(rr,cc)]!==0){ ok=false; break; }
+        const rr=r+(h?0:i), cc=c+(h?i:0);
+        if(rr>=SIZE||cc>=SIZE||state.def[idx(rr,cc)]) ok=false;
       }
       if(ok){
         for(let i=0;i<len;i++){
-          const rr=r+(horiz?0:i);
-          const cc=c+(horiz?i:0);
-          state.def[idx(rr,cc)]=1;
+          const rr=r+(h?0:i), cc=c+(h?i:0);
+          const k=idx(rr,cc);
+          state.def[k]=1;
+          state.shipId[k]=sid;
         }
-        placed=true;
+        sid++;
       }
     }
   }
-  save(); renderBoards();
+  render();
 }
 
-/* ===== gameplay ===== */
-function onShoot(i){
-  if(!state.connected) return setStatus(false,"No conectado");
-  if(!state.youReady || !state.enemyReady) return setStatus(false,"Esperando que ambos estén listos");
-  if(state.turn !== state.role) return;
-  if(state.pendingShot !== null) return;
-  if(state.atk[i]===2 || state.atk[i]===3) return;
-
-  unlockAudio(); if(audioCtx?.state==="suspended") audioCtx.resume();
-  shotSound();
-
-  state.pendingShot = i;
-  save();
-
-  send({t:"shot", i});
-  setStatus(false,"Disparo enviado…");
+function render(){
+  defBoard.innerHTML="";
+  atkBoard.innerHTML="";
+  state.def.forEach(v=>{
+    const d=document.createElement("div");
+    d.className="cell"+(v===1?" ship":v===2?" hit":v===3?" miss":"");
+    defBoard.appendChild(d);
+  });
+  state.atk.forEach((v,i)=>{
+    const d=document.createElement("div");
+    d.className="cell"+(v===2?" hit":v===3?" miss":"");
+    d.onclick=()=>shoot(i);
+    atkBoard.appendChild(d);
+  });
 }
 
-function applyShotOnDefense(i){
-  // returns {hit:boolean, sunk?:boolean} (simple hit/miss for now)
-  const wasShip = state.def[i]===1;
-  if(wasShip) state.def[i]=2;
-  else if(state.def[i]===0) state.def[i]=3;
-  return { hit: wasShip };
+function isSunk(id){
+  return state.shipId.every((v,i)=>v!==id||state.def[i]!==1);
 }
 
-function checkAllSunk(){
-  return state.def.every(v => v!==1);
-}
-
-/* ================= WIRE: messages ================= */
-function onMessage(msg){
-  if(msg.t==="ready"){
-    state.enemyReady = true;
-    save();
-    renderBoards();
-    setStatus(true,"Rival listo ✅");
-    return;
+function shoot(i){
+  if(state.atk[i]) return;
+  if(state.def[i]===1){
+    state.def[i]=2;
+    state.atk[i]=2;
+    if(isSunk(state.shipId[i])) sunkSound();
+    else hitSound();
+  }else{
+    state.def[i]=3;
+    state.atk[i]=3;
+    missSound();
   }
-
-  if(msg.t==="shot"){
-    // enemy shot at us
-    const res = applyShotOnDefense(msg.i);
-    save();
-    renderBoards();
-
-    unlockAudio(); if(audioCtx?.state==="suspended") audioCtx.resume();
-    if(res.hit) hitSound(); else missSound();
-
-    // send result
-    send({t:"result", i: msg.i, hit: res.hit, win: checkAllSunk()});
-    // if enemy misses, we get turn (classic rules vary; we do: alternate turns)
-    state.turn = state.role; // after receiving shot, it's our turn
-    save();
-    renderBoards();
-
-    if(checkAllSunk()){
-      setStatus(false,"Has perdido 😅 (tus barcos hundidos)");
-    }else{
-      setStatus(true,"Te han disparado. Tu turno.");
-    }
-    return;
-  }
-
-  if(msg.t==="result"){
-    // result of our shot
-    const i = msg.i;
-    if(state.pendingShot !== i) {
-      // tolerate
-      state.pendingShot = null;
-    } else {
-      state.pendingShot = null;
-    }
-
-    state.atk[i] = msg.hit ? 2 : 3;
-    // switch turn to enemy
-    state.turn = (state.role==="HOST") ? "CLIENT" : "HOST";
-    save();
-    renderBoards();
-
-    unlockAudio(); if(audioCtx?.state==="suspended") audioCtx.resume();
-    if(msg.hit) hitSound(); else missSound();
-
-    if(msg.win){
-      setStatus(true,"¡Has ganado! 🎉");
-    }else{
-      setStatus(true, msg.hit ? "¡Tocado! Turno rival…" : "Agua… Turno rival…");
-    }
-    return;
-  }
-
-  if(msg.t==="sync"){
-    // optional future
-  }
+  render();
 }
 
-/* ================= TRANSITION TO GAME VIEW ================= */
-function enterGame(){
-  pairView.style.display="none";
-  gameView.style.display="block";
-  hintEl.textContent = "Coloca barcos → Listo → dispara en el tablero enemigo";
-  renderBoards();
-}
-
-/* ================= BUTTONS ================= */
-$("btnRandom").onclick=()=>{
-  if(state.locked || state.youReady) return;
-  placeShips();
-};
-$("btnReady").onclick=()=>{
-  if(state.youReady) return;
-  state.locked = true;
-  state.youReady = true;
-  save();
-  renderBoards();
-  setStatus(true,"Listo ✅");
-  send({t:"ready"});
-  // decide first turn: HOST starts
-  if(!state.turn) state.turn = "HOST";
-  save(); renderBoards();
-};
-$("btnReset").onclick=resetLocal;
-
-/* ================= PAIR UI actions ================= */
-$("btnHost").onclick=async()=>{
-  unlockAudio();
-  myRole="HOST"; state.role="HOST";
-  state.connected=false;
-  state.gameId = "G" + Math.random().toString(36).slice(2,6).toUpperCase();
-  state.turn = "HOST";
-  state.youReady=false; state.enemyReady=false; state.locked=false;
-  state.atk = Array(SIZE*SIZE).fill(0);
-  placeShips(); // new ships for host
-  save();
-
-  roleEl.textContent="Rol: HOST";
-  setStatus(false,"Creando offer (1–5s)…");
-
-  pc=new RTCPeerConnection(cfg);
-  dc=pc.createDataChannel("game");
-
-  dc.onopen=()=>{
-    state.connected=true; save();
-    setStatus(true,"Conectado ✅");
-    enterGame();
-  };
-  dc.onmessage=(e)=>{
-    try{ onMessage(JSON.parse(e.data)); }catch{}
-  };
-
-  await pc.setLocalDescription(await pc.createOffer());
-  await waitIceComplete(pc);
-
-  const payload = pack(pc.localDescription);
-  showQR(`OFFER|${state.gameId}|${payload}`);
-  qrInfoEl.textContent = `QR OFFER (${state.gameId})`;
-  setStatus(false,"Cliente escanea el QR");
-};
-
-$("btnJoin").onclick=()=>{
-  unlockAudio();
-  myRole="CLIENT"; state.role="CLIENT";
-  state.connected=false;
-  state.turn = "HOST";
-  state.youReady=false; state.enemyReady=false; state.locked=false;
-  state.atk = Array(SIZE*SIZE).fill(0);
-  placeShips(); // new ships for client
-  save();
-
-  roleEl.textContent="Rol: CLIENTE";
-  setStatus(false,"Escanea el QR del host");
-};
-
-$("btnCam").onclick=async()=>{
-  setStatus(false,"Escaneando…");
-  await scanner.start(
-    {facingMode:"environment"},
-    {fps:10,qrbox:250},
-    async text=>{
-      await scanner.stop();
-
-      // CLIENT reads OFFER
-      if(text.startsWith("OFFER|")){
-        const parts=text.split("|");
-        const gameId=parts[1];
-        const offerPacked=parts.slice(2).join("|"); // safe
-        state.gameId=gameId;
-        save();
-
-        roleEl.textContent="Rol: CLIENTE";
-        setStatus(false,"Generando answer (1–5s)…");
-
-        const offer=unpack(offerPacked);
-
-        pc=new RTCPeerConnection(cfg);
-        pc.ondatachannel=e=>{
-          dc=e.channel;
-          dc.onopen=()=>{
-            state.connected=true; save();
-            setStatus(true,"Conectado ✅");
-            enterGame();
-          };
-          dc.onmessage=(ev)=>{ try{ onMessage(JSON.parse(ev.data)); }catch{} };
-        };
-
-        await pc.setRemoteDescription(offer);
-        await pc.setLocalDescription(await pc.createAnswer());
-        await waitIceComplete(pc);
-
-        const answerPacked=pack(pc.localDescription);
-        showQR(`ANSWER|${state.gameId}|${answerPacked}`);
-        qrInfoEl.textContent = `QR ANSWER (${state.gameId})`;
-        setStatus(false,"Enseña este QR al host");
-        return;
-      }
-
-      // HOST reads ANSWER
-      if(text.startsWith("ANSWER|")){
-        if(!pc){
-          setStatus(false,"Primero crea partida en este dispositivo (HOST).");
-          return;
-        }
-        const parts=text.split("|");
-        const gameId=parts[1];
-        const answerPacked=parts.slice(2).join("|");
-        if(state.gameId && gameId !== state.gameId){
-          setStatus(false,"Este ANSWER no corresponde a tu partida.");
-          return;
-        }
-        const answer=unpack(answerPacked);
-        await pc.setRemoteDescription(answer);
-        setStatus(false,"Conectando…");
-        return;
-      }
-
-      setStatus(false,"QR no reconocido");
-    }
-  );
-};
-
-/* ================= LOAD SAVED STATE (refresh-proof) ================= */
-if(load()){
-  // restore theme ok already
-  roleEl.textContent = "Rol: " + (state.role || "—");
-  // if we had local game state, show it (but connection won't survive refresh)
-  if(state.def?.length===SIZE*SIZE && state.atk?.length===SIZE*SIZE){
-    renderBoards();
-  }
-  // keep on pair view; user can re-pair if needed
-  setStatus(false,"Estado recuperado. Si quieres seguir online, re-empareja.");
-} else {
-  // first load
-  placeShips();
-  save();
-}
+/* ========= INIT ========= */
+placeShips();
+render();
 </script>
 
 </body>
