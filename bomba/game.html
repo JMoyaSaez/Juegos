@@ -3,427 +3,166 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Partida</title>
+  <title>Game</title>
   <meta name="color-scheme" content="dark light" />
   <style>
     :root{
-      --bg0:#070A12; --bg1:#0B1224; --card:rgba(255,255,255,.06);
-      --bd:rgba(255,255,255,.12); --txt:rgba(255,255,255,.92); --mut:rgba(255,255,255,.70);
-      --acc:#66e3ff; --acc2:#8b5cff; --good:#63f3a6; --bad:#ff5c7a; --warn:#ffd166;
+      --bg:#0b1020; --txt:rgba(255,255,255,.92); --mut:rgba(255,255,255,.70);
+      --bd:rgba(255,255,255,.12); --card:rgba(255,255,255,.06);
+      --acc:#66e3ff; --acc2:#8b5cff; --good:#63f3a6;
       --shadow: 0 18px 60px rgba(0,0,0,.55);
-      --cell: rgba(255,255,255,.06);
-      --cell2: rgba(255,255,255,.10);
     }
     html[data-theme="light"]{
-      --bg0:#f7f8fb; --bg1:#e9ecf6; --card:rgba(0,0,0,.04);
-      --bd:rgba(0,0,0,.10); --txt:rgba(0,0,0,.88); --mut:rgba(0,0,0,.62);
-      --acc:#0077ff; --acc2:#6a36ff; --good:#0aa66a; --bad:#d33b55; --warn:#b8860b;
+      --bg:#f6f7fb; --txt:rgba(0,0,0,.88); --mut:rgba(0,0,0,.62);
+      --bd:rgba(0,0,0,.12); --card:rgba(0,0,0,.04);
+      --acc:#0a63ff; --acc2:#6a36ff; --good:#0aa66a;
       --shadow: 0 18px 60px rgba(30,40,80,.18);
-      --cell: rgba(0,0,0,.05);
-      --cell2: rgba(0,0,0,.08);
     }
     *{box-sizing:border-box}
     body{
-      margin:0;
-      min-height:100vh;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      margin:0; min-height:100vh;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
       color:var(--txt);
-      background:
-        radial-gradient(1200px 700px at 20% 10%, rgba(102,227,255,.18), transparent 55%),
-        radial-gradient(900px 600px at 80% 25%, rgba(139,92,255,.16), transparent 55%),
-        linear-gradient(160deg, var(--bg0), var(--bg1));
-      overflow:hidden;
+      background: radial-gradient(900px 600px at 20% 10%, rgba(102,227,255,.14), transparent 55%),
+                  radial-gradient(800px 500px at 80% 20%, rgba(139,92,255,.12), transparent 55%),
+                  var(--bg);
     }
-    .bg{
-      position:absolute; inset:-220px;
-      background:
-        radial-gradient(circle at 25% 25%, rgba(102,227,255,.22), transparent 45%),
-        radial-gradient(circle at 72% 35%, rgba(139,92,255,.18), transparent 50%),
-        radial-gradient(circle at 50% 78%, rgba(99,243,166,.10), transparent 55%);
-      filter: blur(28px);
-      animation: floaty 9s ease-in-out infinite alternate;
-      pointer-events:none;
-    }
-    @keyframes floaty{ from{transform:translate3d(-1%,-1%,0) scale(1)} to{transform:translate3d(1.5%,1%,0) scale(1.02)} }
-
-    .wrap{
-      position:relative;
-      z-index:1;
-      width:min(1050px, 94vw);
-      margin: 18px auto;
-      display:grid;
-      grid-template-columns: 1fr 360px;
-      gap:14px;
-    }
-    @media (max-width: 980px){
-      .wrap{grid-template-columns:1fr}
-    }
-    .card{
+    .top{
+      width:min(980px, 94vw);
+      margin: 12px auto 0;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 12px;
       border:1px solid var(--bd);
+      border-radius: 14px;
       background: var(--card);
-      border-radius: 18px;
       box-shadow: var(--shadow);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      overflow:hidden;
-      position:relative;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
-    .card::before{
-      content:"";
-      position:absolute; inset:0;
-      background: linear-gradient(135deg, rgba(102,227,255,.14), transparent 35%),
-                  linear-gradient(315deg, rgba(139,92,255,.10), transparent 40%);
-      pointer-events:none;
-      opacity:.85;
-    }
-    .card > *{position:relative; z-index:1}
-
-    header{
-      display:flex; align-items:center; justify-content:space-between;
-      padding:14px 14px 10px;
-      gap:12px;
-    }
-    .title{
-      display:flex; flex-direction:column; gap:2px;
-    }
-    h1{ margin:0; font-size:18px; letter-spacing:.2px }
-    .meta{ margin:0; color:var(--mut); font-size:12px; line-height:1.3 }
-
+    .meta{display:flex; flex-direction:column; gap:2px; min-width:0}
+    .meta b{letter-spacing:.4px}
+    .meta span{font-size:12px; color:var(--mut); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
     .btn{
       appearance:none; border:1px solid var(--bd);
       background: rgba(255,255,255,.07);
       color:var(--txt);
-      padding: 10px 12px;
+      padding:10px 12px;
       border-radius: 12px;
-      font-weight:800;
+      font-weight:900;
       cursor:pointer;
-      transition: transform .08s ease, filter .2s ease, background .2s ease, border-color .2s ease;
       user-select:none;
+      transition: transform .08s ease, filter .2s ease;
     }
-    .btn:hover{ filter:brightness(1.06) }
-    .btn:active{ transform: translateY(1px) scale(.99) }
+    .btn:active{transform:translateY(1px)}
+    .btn:hover{filter:brightness(1.06)}
     .btn.primary{
-      border-color: transparent;
+      border-color:transparent;
       background: linear-gradient(135deg, rgba(102,227,255,.95), rgba(139,92,255,.95));
       color:#07101b;
     }
-    html[data-theme="light"] .btn.primary{ color:#fff; }
-
-    .grid{
-      padding: 14px;
+    html[data-theme="light"] .btn.primary{color:#fff}
+    .wrap{
+      width:min(980px, 94vw);
+      margin: 14px auto 18px;
       display:grid;
-      gap:10px;
-    }
-    .board{
-      display:grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap:10px;
-      align-items:stretch;
-    }
-    @media (max-width: 520px){
-      .board{grid-template-columns: repeat(3, 1fr)}
-    }
-    .tile{
-      border:1px solid var(--bd);
-      background: var(--cell);
-      border-radius: 16px;
-      padding: 14px 12px;
-      min-height: 88px;
-      display:flex;
-      flex-direction:column;
-      justify-content:space-between;
-      gap:10px;
-      transform: translateZ(0);
-      transition: transform .18s ease, background .25s ease, box-shadow .25s ease;
-      position:relative;
-      overflow:hidden;
-    }
-    .tile::after{
-      content:"";
-      position:absolute; inset:0;
-      background: radial-gradient(220px 120px at 20% 25%, rgba(255,255,255,.10), transparent 60%);
-      opacity:.9;
-      pointer-events:none;
-    }
-    .tile:hover{ transform: translateY(-2px) }
-    .tile .k{ color:var(--mut); font-size:12px; margin:0 }
-    .tile .v{ font-size:18px; font-weight:950; margin:0 }
-
-    .log{
-      height: 280px;
-      overflow:auto;
-      border:1px solid var(--bd);
-      background: rgba(255,255,255,.05);
-      border-radius: 14px;
-      padding: 10px;
-      font-size: 12px;
-      color: var(--mut);
-      line-height: 1.35;
-    }
-    .log b{ color: var(--txt) }
-    .log .entry{ padding:8px 8px; border-bottom:1px solid rgba(255,255,255,.06)}
-    html[data-theme="light"] .log .entry{ border-bottom:1px solid rgba(0,0,0,.06) }
-    .log .entry:last-child{ border-bottom:0 }
-
-    .side{
-      display:flex;
-      flex-direction:column;
       gap:14px;
     }
-    .side .pad{ padding:14px }
-    .pill{
-      display:inline-flex; align-items:center; gap:8px;
+    .panel{
       border:1px solid var(--bd);
-      background: rgba(255,255,255,.06);
-      padding:9px 11px;
-      border-radius: 999px;
-      color: var(--mut);
-      font-size: 12px;
-      margin-bottom:10px;
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding:14px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transform: translateZ(0);
+      transition: transform .2s ease;
+    }
+    .panel.boom{ animation: boom .35s ease-out; }
+    @keyframes boom{ 0%{transform:scale(1)} 35%{transform:scale(1.02)} 100%{transform:scale(1)} }
+    .status{
+      display:flex; align-items:center; gap:10px; color:var(--mut); font-size:12px;
     }
     .dot{
       width:10px; height:10px; border-radius:999px;
-      background: var(--bad);
-      box-shadow: 0 0 16px rgba(255,92,122,.35);
-    }
-    .dot.ok{
       background: var(--good);
-      box-shadow: 0 0 16px rgba(99,243,166,.28);
+      box-shadow: 0 0 18px rgba(99,243,166,.25);
     }
-
-    .controls{ display:grid; gap:10px }
-    .row{ display:flex; gap:10px; flex-wrap:wrap }
-
-    /* Animaciones “bomba” */
-    .boom{
-      animation: boom .35s ease-out;
-    }
-    @keyframes boom{
-      0%{ transform: scale(1); filter:brightness(1) }
-      35%{ transform: scale(1.03); filter:brightness(1.12) }
-      100%{ transform: scale(1); filter:brightness(1) }
-    }
-    .shake{
-      animation: shake .35s ease-in-out;
-    }
-    @keyframes shake{
-      0%,100%{ transform: translateX(0) }
-      20%{ transform: translateX(-3px) }
-      40%{ transform: translateX(3px) }
-      60%{ transform: translateX(-2px) }
-      80%{ transform: translateX(2px) }
-    }
-
-    .toast{
-      position:fixed;
-      left:50%;
-      bottom:18px;
-      transform: translateX(-50%) translateY(30px);
-      opacity:0;
-      pointer-events:none;
-      border:1px solid var(--bd);
-      background: rgba(0,0,0,.35);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      padding: 10px 12px;
-      border-radius: 12px;
-      color: var(--txt);
-      transition: opacity .2s ease, transform .2s ease;
-      box-shadow: var(--shadow);
-      max-width:min(560px, 92vw);
-      text-align:center;
-      z-index:5;
-    }
-    html[data-theme="light"] .toast{ background: rgba(255,255,255,.75); }
-    .toast.show{ opacity:1; transform: translateX(-50%) translateY(0) }
   </style>
 </head>
 <body>
-  <div class="bg"></div>
 
-  <div class="wrap">
-    <section class="card">
-      <header>
-        <div class="title">
-          <h1>Partida</h1>
-          <p class="meta" id="meta">Cargando…</p>
-        </div>
-        <div class="row">
-          <button class="btn" id="themeBtn" title="Dark/Light">🌗</button>
-          <button class="btn" id="soundBtn" title="Sonido">🔊</button>
-        </div>
-      </header>
-
-      <div class="grid">
-        <div class="board" id="board">
-          <div class="tile" id="tRoom">
-            <p class="k">Room</p>
-            <p class="v" id="roomTxt">—</p>
-          </div>
-          <div class="tile" id="tRole">
-            <p class="k">Rol</p>
-            <p class="v" id="roleTxt">—</p>
-          </div>
-          <div class="tile" id="tPlayers">
-            <p class="k">Jugadores</p>
-            <p class="v" id="playersTxt">0</p>
-          </div>
-          <div class="tile" id="tPing">
-            <p class="k">Ping</p>
-            <p class="v" id="pingTxt">—</p>
-          </div>
-          <div class="tile" id="tState">
-            <p class="k">Estado</p>
-            <p class="v" id="stateTxt">—</p>
-          </div>
-          <div class="tile" id="tAction">
-            <p class="k">Acción</p>
-            <p class="v">💥</p>
-          </div>
-        </div>
-
-        <div class="log" id="log"></div>
-      </div>
-    </section>
-
-    <aside class="side">
-      <section class="card">
-        <div class="pad">
-          <div class="pill">
-            <span class="dot" id="wsDot"></span>
-            <span id="wsTxt">Sin conexión</span>
-          </div>
-
-          <div class="controls">
-            <button class="btn primary" id="readyBtn">✅ Estoy listo</button>
-            <div class="row">
-              <button class="btn" id="pingBtn">📡 Ping</button>
-              <button class="btn" id="boomBtn">💥 Bomba (demo)</button>
-            </div>
-            <div class="row">
-              <button class="btn" id="copyInviteBtn">🔗 Copiar invitación</button>
-              <button class="btn" id="waInviteBtn">🟢 WhatsApp</button>
-            </div>
-
-            <p class="meta" style="margin:0">
-              Nota: el “juego real” (tablero, turnos, disparos…) lo metemos aquí encima.
-              Esto ya te deja la base robusta: room por link, WS, sonidos, animación, y UI.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="pad">
-          <p class="meta" style="margin:0">
-            Si refrescas, reentra a la sala porque el <b>room</b> y el <b>rol</b> van en la URL.
-            Para persistir estado de juego, se guarda en localStorage por room.
-          </p>
-        </div>
-      </section>
-    </aside>
+  <div class="top">
+    <div class="meta">
+      <div><b>Sala:</b> <span id="room">—</span> · <b>Rol:</b> <span id="role">—</span></div>
+      <span id="hint">Listo. Aquí va el juego.</span>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
+      <button class="btn" id="themeBtn" title="Dark/Light">🌗</button>
+      <button class="btn" id="soundBtn" title="Sonido">🔊</button>
+      <button class="btn primary" id="testBtn">💥 Test</button>
+    </div>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <div class="wrap">
+    <div class="panel" id="panel">
+      <div class="status"><span class="dot"></span> Conectado (demo) · Sonido + animación OK</div>
+      <p style="margin:10px 0 0; color:var(--mut); line-height:1.35">
+        Aquí metemos el juego real. El host ya no necesita nada más: creó sala en index,
+        compartió link, y entró a jugar.
+      </p>
+    </div>
+  </div>
 
   <script>
     "use strict";
 
-    // === Ajusta esto si tu WS no está en /ws ===
-    const WS_PATH = "/ws";
-
     const THEME_KEY = "jm_games_theme_v1";
     const SOUND_KEY = "jm_games_sound_v1";
 
-    // --- UI refs ---
-    const metaEl = document.getElementById("meta");
-    const roomTxt = document.getElementById("roomTxt");
-    const roleTxt = document.getElementById("roleTxt");
-    const playersTxt = document.getElementById("playersTxt");
-    const pingTxt = document.getElementById("pingTxt");
-    const stateTxt = document.getElementById("stateTxt");
-    const logEl = document.getElementById("log");
-
-    const themeBtn = document.getElementById("themeBtn");
-    const soundBtn = document.getElementById("soundBtn");
-
-    const wsDot = document.getElementById("wsDot");
-    const wsTxt = document.getElementById("wsTxt");
-
-    const readyBtn = document.getElementById("readyBtn");
-    const pingBtn = document.getElementById("pingBtn");
-    const boomBtn = document.getElementById("boomBtn");
-    const copyInviteBtn = document.getElementById("copyInviteBtn");
-    const waInviteBtn = document.getElementById("waInviteBtn");
-
-    const toastEl = document.getElementById("toast");
-
-    const tAction = document.getElementById("tAction");
-    const tState = document.getElementById("tState");
-
-    // --- Helpers ---
-    function toast(msg){
-      toastEl.textContent = msg;
-      toastEl.classList.add("show");
-      clearTimeout(toastEl._t);
-      toastEl._t = setTimeout(()=>toastEl.classList.remove("show"), 1500);
-    }
-
+    // theme
     function loadTheme(){
       const saved = localStorage.getItem(THEME_KEY);
-      const theme = saved === "light" ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", theme);
+      document.documentElement.setAttribute("data-theme", saved === "light" ? "light" : "dark");
     }
     function toggleTheme(){
       const cur = document.documentElement.getAttribute("data-theme") || "dark";
       const next = cur === "dark" ? "light" : "dark";
       document.documentElement.setAttribute("data-theme", next);
       localStorage.setItem(THEME_KEY, next);
-      toast(next === "dark" ? "Modo oscuro" : "Modo claro");
     }
+    document.getElementById("themeBtn").addEventListener("click", toggleTheme);
     loadTheme();
-    themeBtn.addEventListener("click", toggleTheme);
 
+    // params
+    const url = new URL(location.href);
+    const room = (url.searchParams.get("room") || "").trim();
+    const role = (url.searchParams.get("role") || "player").trim().toLowerCase();
+    document.getElementById("room").textContent = room || "—";
+    document.getElementById("role").textContent = room ? role : "—";
+    document.getElementById("hint").textContent = room ? "Entraste a la sala. A jugar." : "Falta ?room=...";
+
+    // sound (sintetizado)
     let soundEnabled = (localStorage.getItem(SOUND_KEY) ?? "1") === "1";
-    function syncSoundIcon(){
-      soundBtn.textContent = soundEnabled ? "🔊" : "🔇";
-    }
-    syncSoundIcon();
+    const soundBtn = document.getElementById("soundBtn");
+    function syncSound(){ soundBtn.textContent = soundEnabled ? "🔊" : "🔇"; }
+    syncSound();
     soundBtn.addEventListener("click", ()=>{
       soundEnabled = !soundEnabled;
       localStorage.setItem(SOUND_KEY, soundEnabled ? "1" : "0");
-      syncSoundIcon();
-      toast(soundEnabled ? "Sonido ON" : "Sonido OFF");
+      syncSound();
     });
 
-    // --- Tiny synth (no assets) ---
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let ac = null;
-
     function ensureAudio(){
       if (!soundEnabled) return null;
       if (!ac) ac = new AudioCtx();
       if (ac.state === "suspended") ac.resume().catch(()=>{});
       return ac;
     }
-
-    function beep({freq=440, dur=0.08, type="sine", gain=0.07} = {}){
-      const ctx = ensureAudio();
-      if (!ctx) return;
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = type;
-      o.frequency.value = freq;
-      g.gain.value = gain;
-      o.connect(g); g.connect(ctx.destination);
-      o.start();
-      o.stop(ctx.currentTime + dur);
-    }
-
     function whoosh(){
-      // barrido rápido tipo “lanzamiento”
-      const ctx = ensureAudio();
-      if (!ctx) return;
+      const ctx = ensureAudio(); if (!ctx) return;
       const o = ctx.createOscillator();
       const g = ctx.createGain();
       o.type = "triangle";
@@ -433,16 +172,10 @@
       g.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.02);
       g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
       o.connect(g); g.connect(ctx.destination);
-      o.start();
-      o.stop(ctx.currentTime + 0.2);
+      o.start(); o.stop(ctx.currentTime + 0.2);
     }
-
     function explosion(){
-      // pseudo-explosión (ruido + golpe)
-      const ctx = ensureAudio();
-      if (!ctx) return;
-
-      // golpe grave
+      const ctx = ensureAudio(); if (!ctx) return;
       const o = ctx.createOscillator();
       const g = ctx.createGain();
       o.type = "sine";
@@ -451,245 +184,21 @@
       g.gain.setValueAtTime(0.12, ctx.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
       o.connect(g); g.connect(ctx.destination);
-      o.start();
-      o.stop(ctx.currentTime + 0.28);
-
-      // chasquido
-      setTimeout(()=>beep({freq:240, dur:0.05, type:"square", gain:0.05}), 20);
+      o.start(); o.stop(ctx.currentTime + 0.28);
       if (navigator.vibrate) navigator.vibrate([20, 30, 40]);
     }
 
-    function logLine(html){
-      const div = document.createElement("div");
-      div.className = "entry";
-      div.innerHTML = html;
-      logEl.appendChild(div);
-      logEl.scrollTop = logEl.scrollHeight;
-    }
-
-    function addBoomFX(){
-      tAction.classList.remove("boom"); tAction.offsetHeight; tAction.classList.add("boom");
-      tState.classList.remove("shake"); tState.offsetHeight; tState.classList.add("shake");
-    }
-
-    // --- Params ---
-    const url = new URL(location.href);
-    const room = (url.searchParams.get("room") || "").trim();
-    const role = (url.searchParams.get("role") || "player").trim().toLowerCase();
-
-    roomTxt.textContent = room || "—";
-    roleTxt.textContent = room ? role : "—";
-
-    const inviteLink = (()=> {
-      const base = location.origin + location.pathname;
-      const u = new URL(base);
-      u.searchParams.set("room", room);
-      u.searchParams.set("role", "player");
-      return u.toString();
-    })();
-
-    if (!room){
-      metaEl.textContent = "Falta ?room=… en la URL. Vuelve a index.html y crea una partida.";
-      stateTxt.textContent = "Sin room";
-      toast("No hay room en la URL ❌");
-    }else{
-      metaEl.textContent = `Sala ${room} · Entrando como ${role}`;
-      stateTxt.textContent = "Conectando…";
-    }
-
-    // --- WebSocket ---
-    function wsUrl(){
-      const proto = location.protocol === "https:" ? "wss:" : "ws:";
-      return `${proto}//${location.host}${WS_PATH}`;
-    }
-
-    let ws = null;
-    let lastPingAt = 0;
-
-    function setWsState(ok, text){
-      wsTxt.textContent = text;
-      wsDot.classList.toggle("ok", !!ok);
-    }
-
-    function send(obj){
-      if (!ws || ws.readyState !== 1) return;
-      ws.send(JSON.stringify(obj));
-    }
-
-    function connectWs(){
-      if (!room) return;
-
-      try{
-        ws = new WebSocket(wsUrl());
-        setWsState(false, "Conectando…");
-
-        ws.addEventListener("open", ()=>{
-          setWsState(true, "Conectado");
-          stateTxt.textContent = "Online";
-          beep({freq:740, dur:0.06, type:"sine", gain:0.06});
-          logLine(`✅ <b>WS</b> conectado. Uniéndome a <b>${room}</b>…`);
-
-          // join room
-          send({ type:"join", room, role, ts:Date.now() });
-          // ask state (si tu backend lo soporta)
-          send({ type:"state_req", room, ts:Date.now() });
-        });
-
-        ws.addEventListener("message", (ev)=>{
-          let msg = null;
-          try{ msg = JSON.parse(ev.data); }catch{ return; }
-
-          // Puedes adaptar estos "types" a tu backend.
-          switch(msg.type){
-            case "joined":
-              playersTxt.textContent = String(msg.players ?? "?");
-              stateTxt.textContent = "En sala";
-              logLine(`👋 Entraste en sala <b>${room}</b>. Jugadores: <b>${msg.players ?? "?"}</b>.`);
-              beep({freq:520, dur:0.05, type:"triangle", gain:0.06});
-              break;
-
-            case "players":
-              playersTxt.textContent = String(msg.players ?? "?");
-              logLine(`👥 Jugadores ahora: <b>${msg.players ?? "?"}</b>.`);
-              break;
-
-            case "pong":
-              if (lastPingAt){
-                const ms = Math.max(0, Date.now() - lastPingAt);
-                pingTxt.textContent = ms + " ms";
-              }
-              break;
-
-            case "ready":
-              logLine(`✅ <b>${msg.who ?? "alguien"}</b> está listo.`);
-              beep({freq:640, dur:0.06, type:"sine", gain:0.05});
-              break;
-
-            case "boom":
-              logLine(`💥 <b>${msg.who ?? "alguien"}</b> lanzó bomba.`);
-              addBoomFX();
-              whoosh();
-              setTimeout(explosion, 140);
-              break;
-
-            case "state":
-              if (typeof msg.players !== "undefined") playersTxt.textContent = String(msg.players);
-              if (msg.stateText) stateTxt.textContent = String(msg.stateText);
-              logLine(`🧠 Estado recibido.`);
-              break;
-
-            default:
-              // logs genéricos
-              if (msg.type) logLine(`📩 Mensaje <b>${msg.type}</b>`);
-          }
-        });
-
-        ws.addEventListener("close", ()=>{
-          setWsState(false, "Desconectado");
-          stateTxt.textContent = "Offline";
-          pingTxt.textContent = "—";
-          logLine(`⚠️ WS desconectado.`);
-          beep({freq:220, dur:0.08, type:"sine", gain:0.06});
-        });
-
-        ws.addEventListener("error", ()=>{
-          setWsState(false, "Error WS");
-          stateTxt.textContent = "Error";
-          logLine(`❌ Error en WS (endpoint: <b>${WS_PATH}</b>).`);
-        });
-
-      }catch(e){
-        setWsState(false, "WS no disponible");
-        stateTxt.textContent = "Sin WS";
-        logLine(`❌ No se pudo crear WebSocket.`);
-      }
-    }
-
-    connectWs();
-
-    // --- Controls ---
-    function userTag(){
-      // id simple por pestaña
-      let id = sessionStorage.getItem("jm_user_id_v1");
-      if (!id){
-        id = Math.random().toString(16).slice(2, 6).toUpperCase();
-        sessionStorage.setItem("jm_user_id_v1", id);
-      }
-      return (role === "host" ? "HOST" : "P" ) + "-" + id;
-    }
-    const me = userTag();
-
-    readyBtn.addEventListener("click", ()=>{
-      if (!room) return;
-      send({ type:"ready", room, who: me, ts:Date.now() });
-      stateTxt.textContent = "Listo";
-      addBoomFX();
-      beep({freq:880, dur:0.05, type:"triangle", gain:0.06});
-      toast("Listo ✅");
+    // test button
+    const panel = document.getElementById("panel");
+    document.getElementById("testBtn").addEventListener("click", ()=>{
+      // unlock audio on first gesture
+      ensureAudio();
+      panel.classList.remove("boom"); panel.offsetHeight; panel.classList.add("boom");
+      whoosh(); setTimeout(explosion, 140);
     });
 
-    pingBtn.addEventListener("click", ()=>{
-      if (!room) return;
-      lastPingAt = Date.now();
-      send({ type:"ping", room, ts:lastPingAt });
-      beep({freq:520, dur:0.04, type:"sine", gain:0.04});
-    });
-
-    boomBtn.addEventListener("click", ()=>{
-      if (!room) return;
-      send({ type:"boom", room, who: me, ts:Date.now() });
-      // feedback local inmediato
-      addBoomFX();
-      whoosh();
-      setTimeout(explosion, 140);
-      toast("💥");
-    });
-
-    copyInviteBtn.addEventListener("click", async ()=>{
-      if (!room) return;
-      try{
-        await navigator.clipboard.writeText(inviteLink);
-        toast("Invitación copiada 📋");
-      }catch{
-        toast("No pude copiar, copia manual");
-      }
-    });
-
-    waInviteBtn.addEventListener("click", ()=>{
-      if (!room) return;
-      const msg = encodeURIComponent(`🎮 Entra a la partida ${room}:\n${inviteLink}`);
-      window.open(`https://wa.me/?text=${msg}`, "_blank");
-    });
-
-    // Primer gesto del usuario -> desbloquea audio en móvil
+    // unlock audio on first user gesture
     window.addEventListener("pointerdown", ()=>{ ensureAudio(); }, { once:true });
-
-    // Persistencia base por room (para el “juego real”)
-    const LS_KEY = room ? ("jm_room_state_" + room) : null;
-    function saveState(obj){
-      if (!LS_KEY) return;
-      localStorage.setItem(LS_KEY, JSON.stringify(obj));
-    }
-    function loadState(){
-      if (!LS_KEY) return null;
-      try{ return JSON.parse(localStorage.getItem(LS_KEY) || "null"); }catch{ return null; }
-    }
-
-    // ejemplo mínimo: guardar “estoy listo”
-    const prev = loadState();
-    if (prev?.wasReady){
-      stateTxt.textContent = "Listo";
-      logLine(`↩️ Estado local: estabas <b>listo</b> antes del refresh.`);
-    }
-    readyBtn.addEventListener("click", ()=>{
-      const st = loadState() || {};
-      st.wasReady = true;
-      saveState(st);
-    });
-
-    // Mensaje inicial
-    logLine(`🧩 Yo soy <b>${me}</b>.`);
-    if (role === "host") logLine(`👑 Eres <b>HOST</b>. Comparte invitación para jugadores.`);
   </script>
 </body>
 </html>
