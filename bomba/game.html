@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Game</title>
+  <title>La Bomba</title>
   <meta name="color-scheme" content="dark light" />
   <style>
     :root{
       --bg:#0b1020; --txt:rgba(255,255,255,.92); --mut:rgba(255,255,255,.70);
       --bd:rgba(255,255,255,.12); --card:rgba(255,255,255,.06);
-      --acc:#66e3ff; --acc2:#8b5cff; --good:#63f3a6;
+      --acc:#66e3ff; --acc2:#8b5cff; --good:#63f3a6; --bad:#ff5c7a; --warn:#ffd166;
       --shadow: 0 18px 60px rgba(0,0,0,.55);
     }
     html[data-theme="light"]{
       --bg:#f6f7fb; --txt:rgba(0,0,0,.88); --mut:rgba(0,0,0,.62);
       --bd:rgba(0,0,0,.12); --card:rgba(0,0,0,.04);
-      --acc:#0a63ff; --acc2:#6a36ff; --good:#0aa66a;
+      --acc:#0a63ff; --acc2:#6a36ff; --good:#0aa66a; --bad:#d33b55; --warn:#b8860b;
       --shadow: 0 18px 60px rgba(30,40,80,.18);
     }
     *{box-sizing:border-box}
@@ -23,25 +23,41 @@
       margin:0; min-height:100vh;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
       color:var(--txt);
-      background: radial-gradient(900px 600px at 20% 10%, rgba(102,227,255,.14), transparent 55%),
-                  radial-gradient(800px 500px at 80% 20%, rgba(139,92,255,.12), transparent 55%),
-                  var(--bg);
+      background:
+        radial-gradient(900px 600px at 20% 10%, rgba(102,227,255,.14), transparent 55%),
+        radial-gradient(800px 500px at 80% 20%, rgba(139,92,255,.12), transparent 55%),
+        var(--bg);
     }
+
+    /* Top bar (muy compacta) */
     .top{
-      width:min(980px, 94vw);
-      margin: 12px auto 0;
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      padding:10px 12px;
+      width:min(1100px, 96vw);
+      margin: 10px auto 0;
       border:1px solid var(--bd);
       border-radius: 14px;
       background: var(--card);
       box-shadow: var(--shadow);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
+      overflow:hidden;
     }
-    .meta{display:flex; flex-direction:column; gap:2px; min-width:0}
-    .meta b{letter-spacing:.4px}
-    .meta span{font-size:12px; color:var(--mut); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    .topRow{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 12px;
+    }
+    .meta{
+      display:flex; flex-direction:column; gap:2px; min-width:0;
+    }
+    .metaLine{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:baseline;
+    }
+    .meta b{letter-spacing:.35px}
+    .meta small{
+      color:var(--mut);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      max-width: 62vw;
+    }
+
     .btn{
       appearance:none; border:1px solid var(--bd);
       background: rgba(255,255,255,.07);
@@ -51,7 +67,8 @@
       font-weight:900;
       cursor:pointer;
       user-select:none;
-      transition: transform .08s ease, filter .2s ease;
+      transition: transform .08s ease, filter .2s ease, background .2s ease;
+      white-space:nowrap;
     }
     .btn:active{transform:translateY(1px)}
     .btn:hover{filter:brightness(1.06)}
@@ -61,13 +78,68 @@
       color:#07101b;
     }
     html[data-theme="light"] .btn.primary{color:#fff}
-    .wrap{
-      width:min(980px, 94vw);
-      margin: 14px auto 18px;
-      display:grid;
-      gap:14px;
+    .btn.danger{
+      border-color: transparent;
+      background: linear-gradient(135deg, rgba(255,92,122,.95), rgba(255,209,102,.85));
+      color:#1b0b10;
     }
-    .panel{
+    html[data-theme="light"] .btn.danger{color:#fff}
+
+    .tiny{padding:10px 10px; min-width:44px}
+    .rightBtns{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end}
+
+    /* Host panel plegable */
+    .hostPanel{
+      border-top:1px solid rgba(255,255,255,.08);
+      padding:10px 12px 12px;
+      display:grid;
+      gap:10px;
+    }
+    html[data-theme="light"] .hostPanel{ border-top:1px solid rgba(0,0,0,.08); }
+
+    .row{display:flex; gap:10px; flex-wrap:wrap}
+    .field{
+      flex: 1 1 220px;
+      display:flex; align-items:center; gap:10px;
+      border:1px solid var(--bd);
+      background: rgba(255,255,255,.06);
+      border-radius: 12px;
+      padding:10px 12px;
+      min-width: 240px;
+    }
+    .field input, .field select{
+      width:100%;
+      background:transparent; border:0; outline:none;
+      color:var(--txt);
+      font-weight:800;
+      font-size:14px;
+      appearance:none;
+    }
+    .field label{
+      color:var(--mut);
+      font-size:12px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+    .hint{
+      color:var(--mut);
+      font-size:12px;
+      line-height:1.3;
+      margin:0;
+    }
+
+    /* Main game area */
+    .wrap{
+      width:min(1100px, 96vw);
+      margin: 12px auto 18px;
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:12px;
+      align-items:start;
+    }
+    @media (max-width: 980px){ .wrap{grid-template-columns:1fr} }
+
+    .card{
       border:1px solid var(--bd);
       background: var(--card);
       border-radius: 18px;
@@ -75,52 +147,426 @@
       padding:14px;
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      transform: translateZ(0);
-      transition: transform .2s ease;
+      overflow:hidden;
     }
-    .panel.boom{ animation: boom .35s ease-out; }
-    @keyframes boom{ 0%{transform:scale(1)} 35%{transform:scale(1.02)} 100%{transform:scale(1)} }
-    .status{
-      display:flex; align-items:center; gap:10px; color:var(--mut); font-size:12px;
+
+    .big{
+      display:grid;
+      gap:12px;
+      min-height: 380px;
+      align-content:start;
+    }
+    .who{
+      display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+    }
+    .who h2{ margin:0; font-size: 22px; letter-spacing:.3px}
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      border:1px solid var(--bd);
+      background: rgba(255,255,255,.06);
+      padding:8px 10px;
+      border-radius: 999px;
+      color:var(--mut);
+      font-size:12px;
+      font-weight:900;
     }
     .dot{
       width:10px; height:10px; border-radius:999px;
       background: var(--good);
       box-shadow: 0 0 18px rgba(99,243,166,.25);
     }
+    .dot.armed{ background: var(--warn); box-shadow: 0 0 18px rgba(255,209,102,.25); }
+    .dot.dead{ background: var(--bad); box-shadow: 0 0 18px rgba(255,92,122,.25); }
+
+    .prompt{
+      border:1px solid var(--bd);
+      background: rgba(255,255,255,.05);
+      border-radius: 16px;
+      padding: 14px;
+      font-size: 18px;
+      line-height: 1.25;
+      font-weight: 900;
+      letter-spacing: .2px;
+      min-height: 92px;
+      display:flex;
+      align-items:center;
+    }
+
+    .timerBox{
+      border:1px solid var(--bd);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(255,255,255,.05);
+      display:grid;
+      gap:10px;
+    }
+    .bar{
+      height: 14px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.12);
+      overflow:hidden;
+      background: rgba(255,255,255,.04);
+    }
+    .bar > div{
+      height:100%;
+      width: 0%;
+      background: linear-gradient(90deg, rgba(99,243,166,.9), rgba(255,209,102,.9), rgba(255,92,122,.92));
+      transition: width .08s linear;
+    }
+    .timeRow{
+      display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+    }
+    .timeRow .t{
+      font-size: 40px;
+      font-weight: 1000;
+      letter-spacing: .8px;
+    }
+    .timeRow .s{
+      color: var(--mut);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .actions{
+      display:flex; gap:10px; flex-wrap:wrap;
+    }
+    .actions .btn{ flex: 1 1 180px; }
+
+    /* Side: jugadores */
+    .list{
+      display:grid; gap:8px;
+    }
+    .player{
+      border:1px solid var(--bd);
+      background: rgba(255,255,255,.05);
+      border-radius: 14px;
+      padding: 10px 12px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .player b{ font-size:14px; letter-spacing:.2px }
+    .player small{ color:var(--mut); font-weight:900 }
+    .pill{
+      border:1px solid var(--bd);
+      background: rgba(255,255,255,.06);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size:12px;
+      font-weight: 1000;
+      color: var(--mut);
+      white-space:nowrap;
+    }
+    .pill.out{ color: rgba(255,92,122,.95); border-color: rgba(255,92,122,.35); background: rgba(255,92,122,.10); }
+
+    /* FX */
+    .boom{
+      animation: boom .35s ease-out;
+    }
+    @keyframes boom{
+      0%{ transform: scale(1); filter:brightness(1) }
+      35%{ transform: scale(1.02); filter:brightness(1.12) }
+      100%{ transform: scale(1); filter:brightness(1) }
+    }
+    .shake{
+      animation: shake .35s ease-in-out;
+    }
+    @keyframes shake{
+      0%,100%{ transform: translateX(0) }
+      20%{ transform: translateX(-3px) }
+      40%{ transform: translateX(3px) }
+      60%{ transform: translateX(-2px) }
+      80%{ transform: translateX(2px) }
+    }
+
+    .overlay{
+      position: fixed; inset: 0;
+      display:none;
+      place-items:center;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 50;
+      padding: 18px;
+    }
+    html[data-theme="light"] .overlay{ background: rgba(255,255,255,.65); }
+    .modal{
+      width:min(560px, 94vw);
+      border:1px solid var(--bd);
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .modal h3{ margin: 0 0 8px; letter-spacing:.2px }
+    .modal p{ margin: 0 0 12px; color:var(--mut); line-height:1.35; font-weight:800 }
+    .modal .row{ justify-content:flex-end }
+
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:16px;
+      transform: translateX(-50%) translateY(30px);
+      opacity:0;
+      pointer-events:none;
+      border:1px solid var(--bd);
+      background: rgba(0,0,0,.35);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 10px 12px;
+      border-radius: 12px;
+      color: var(--txt);
+      transition: opacity .2s ease, transform .2s ease;
+      box-shadow: var(--shadow);
+      max-width:min(560px, 92vw);
+      text-align:center;
+      z-index:60;
+      font-weight:900;
+    }
+    html[data-theme="light"] .toast{ background: rgba(255,255,255,.78); }
+    .toast.show{ opacity:1; transform: translateX(-50%) translateY(0) }
   </style>
 </head>
 <body>
 
-  <div class="top">
-    <div class="meta">
-      <div><b>Sala:</b> <span id="room">—</span> · <b>Rol:</b> <span id="role">—</span></div>
-      <span id="hint">Listo. Aquí va el juego.</span>
-    </div>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
-      <button class="btn" id="themeBtn" title="Dark/Light">🌗</button>
-      <button class="btn" id="soundBtn" title="Sonido">🔊</button>
-      <button class="btn primary" id="testBtn">💥 Test</button>
-    </div>
-  </div>
+  <!-- TOP -->
+  <div class="top" id="top">
+    <div class="topRow">
+      <div class="meta">
+        <div class="metaLine">
+          <b>La Bomba</b>
+          <small id="metaText">Configura jugadores y empieza.</small>
+        </div>
+        <small id="subMeta">Sala: <span id="roomTxt">—</span> · Modo: <span id="modeTxt">Clásico</span></small>
+      </div>
 
-  <div class="wrap">
-    <div class="panel" id="panel">
-      <div class="status"><span class="dot"></span> Conectado (demo) · Sonido + animación OK</div>
-      <p style="margin:10px 0 0; color:var(--mut); line-height:1.35">
-        Aquí metemos el juego real. El host ya no necesita nada más: creó sala en index,
-        compartió link, y entró a jugar.
+      <div class="rightBtns">
+        <button class="btn tiny" id="hostToggleBtn" title="Panel host">⚙️</button>
+        <button class="btn tiny" id="themeBtn" title="Dark/Light">🌗</button>
+        <button class="btn tiny" id="soundBtn" title="Sonido">🔊</button>
+        <button class="btn primary" id="startBtn">▶️ Start</button>
+      </div>
+    </div>
+
+    <div class="hostPanel" id="hostPanel" style="display:none">
+      <div class="row">
+        <div class="field">
+          <label>Jugadores</label>
+          <input id="playersInput" placeholder="Ej: Juan, Marta, Pepe, Ana" />
+        </div>
+
+        <div class="field" style="max-width:320px">
+          <label>Modo</label>
+          <select id="modeSel">
+            <option value="classic">Clásico (preguntas/retos)</option>
+            <option value="categories">Categorías (di algo de...)</option>
+            <option value="hot">Hot (más picante)</option>
+          </select>
+        </div>
+
+        <div class="field" style="max-width:320px">
+          <label>Tiempo</label>
+          <select id="timeSel">
+            <option value="short">Corto (10–20s)</option>
+            <option value="mid" selected>Normal (15–35s)</option>
+            <option value="long">Largo (25–55s)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn" id="copyInviteBtn">🔗 Copiar link (solo acceso)</button>
+        <button class="btn" id="waInviteBtn">🟢 WhatsApp (solo acceso)</button>
+        <button class="btn" id="resetBtn">🧹 Reset partida</button>
+      </div>
+
+      <p class="hint">
+        Sin backend: la partida <b>vive en este móvil</b>. El link es solo para que quien quiera abra la página, pero no sincroniza.
+        Para jugar, lo típico es <b>pasar el móvil</b>.
       </p>
     </div>
   </div>
 
+  <!-- GAME -->
+  <div class="wrap">
+    <section class="card big" id="mainCard">
+      <div class="who">
+        <h2 id="turnTitle">Listo para empezar</h2>
+        <div class="badge" id="statusBadge"><span class="dot" id="statusDot"></span><span id="statusTxt">Idle</span></div>
+      </div>
+
+      <div class="prompt" id="prompt">Pulsa “Start” arriba, o abre ⚙️ para meter jugadores.</div>
+
+      <div class="timerBox">
+        <div class="timeRow">
+          <div class="t" id="timeTxt">—</div>
+          <div class="s" id="timeHint">La bomba no está armada</div>
+        </div>
+        <div class="bar"><div id="barFill"></div></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="nextBtn" disabled>➡️ Pasar bomba</button>
+        <button class="btn danger" id="explodeBtn" disabled>💥 Explota (forzar)</button>
+      </div>
+
+      <p class="hint" id="footerHint">
+        Consejo: toca “Pasar bomba” SOLO cuando le hayas pasado el móvil al siguiente.
+      </p>
+    </section>
+
+    <aside class="card">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px">
+        <b>Jugadores</b>
+        <span class="pill" id="alivePill">0 vivos</span>
+      </div>
+      <div class="list" id="playersList"></div>
+    </aside>
+  </div>
+
+  <!-- EXPLODE MODAL -->
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h3 id="modalTitle">💥 ¡BOOM!</h3>
+      <p id="modalText">¿Quién tenía la bomba?</p>
+      <div class="row">
+        <button class="btn" id="cancelLoseBtn">No, fue otro</button>
+        <button class="btn danger" id="confirmLoseBtn">Confirmar eliminado</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
   <script>
     "use strict";
 
-    const THEME_KEY = "jm_games_theme_v1";
-    const SOUND_KEY = "jm_games_sound_v1";
+    // ========= CONFIG =========
+    const THEME_KEY = "jm_bomba_theme_v1";
+    const SOUND_KEY = "jm_bomba_sound_v1";
 
-    // theme
+    // prompts por modo
+    const PROMPTS = {
+      classic: [
+        "Di 3 cosas que te llevarías a una isla desierta.",
+        "Confiesa una manía rara que tengas.",
+        "Imita a alguien del grupo durante 5 segundos.",
+        "Cuenta un micro-FAIL épico (algo que te salió mal).",
+        "Di un dato curioso que no sea aburrido.",
+        "Haz un brindis absurdo (muy serio).",
+        "Di 3 películas que te flipen sin pensar mucho.",
+        "Di algo bueno de la persona a tu derecha.",
+        "Di 3 marcas de coches en 4 segundos.",
+        "Describe tu día usando solo 3 palabras.",
+      ],
+      categories: [
+        "Categoría: Animales (di uno que empiece por M).",
+        "Categoría: Comida (di algo que se come frío).",
+        "Categoría: Ciudades (di una en España).",
+        "Categoría: Profesiones (di una que use uniforme).",
+        "Categoría: Deportes (di uno con pelota).",
+        "Categoría: Series (di una famosa).",
+        "Categoría: Canciones (di una de los 90).",
+        "Categoría: Marcas (di una tecnológica).",
+        "Categoría: Herramientas (di una de taller).",
+        "Categoría: Cosas del coche (di una pieza).",
+      ],
+      hot: [
+        "Di una verdad que no sueles decir en voz alta.",
+        "¿Qué te da vergüenza admitir que te gusta?",
+        "Cuenta una anécdota “tierra trágame”.",
+        "¿Qué harías con 1 millón pero sin decírselo a nadie?",
+        "¿Qué te pone nervioso de verdad?",
+        "Di un halago MUY directo a alguien del grupo.",
+        "Di una cosa que cambiarías de ti (sin drama).",
+        "Di una fantasía absurda (modo cómico).",
+        "¿Qué te molesta pero te callas casi siempre?",
+        "Di algo que te parezca sexy pero raro (sin pasarte).",
+      ]
+    };
+
+    const TIME_RANGES = {
+      short: [10, 20],
+      mid:   [15, 35],
+      long:  [25, 55]
+    };
+
+    // ========= STATE =========
+    const url = new URL(location.href);
+    const room = (url.searchParams.get("room") || "LOCAL").trim();
+    const LS_KEY = "jm_bomba_state_" + room;
+
+    const state = {
+      room,
+      mode: "classic",
+      timePreset: "mid",
+      players: [], // {name, alive:true, losses:0}
+      started: false,
+      turnIdx: 0,  // índice en lista "vivos"
+      armed: false,
+      endsAt: 0,
+      durationMs: 0,
+      currentPrompt: "",
+      lastTick: 0
+    };
+
+    function save(){
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    }
+    function load(){
+      try{
+        const raw = localStorage.getItem(LS_KEY);
+        if (!raw) return false;
+        const obj = JSON.parse(raw);
+        if (!obj || typeof obj !== "object") return false;
+        Object.assign(state, obj);
+        return true;
+      }catch{ return false; }
+    }
+
+    // ========= UI refs =========
+    const roomTxt = document.getElementById("roomTxt");
+    const modeTxt = document.getElementById("modeTxt");
+    const metaText = document.getElementById("metaText");
+
+    const hostToggleBtn = document.getElementById("hostToggleBtn");
+    const hostPanel = document.getElementById("hostPanel");
+
+    const themeBtn = document.getElementById("themeBtn");
+    const soundBtn = document.getElementById("soundBtn");
+
+    const playersInput = document.getElementById("playersInput");
+    const modeSel = document.getElementById("modeSel");
+    const timeSel = document.getElementById("timeSel");
+
+    const startBtn = document.getElementById("startBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const explodeBtn = document.getElementById("explodeBtn");
+
+    const turnTitle = document.getElementById("turnTitle");
+    const promptEl = document.getElementById("prompt");
+    const timeTxt = document.getElementById("timeTxt");
+    const timeHint = document.getElementById("timeHint");
+    const barFill = document.getElementById("barFill");
+
+    const playersList = document.getElementById("playersList");
+    const alivePill = document.getElementById("alivePill");
+
+    const mainCard = document.getElementById("mainCard");
+    const statusBadge = document.getElementById("statusBadge");
+    const statusDot = document.getElementById("statusDot");
+    const statusTxt = document.getElementById("statusTxt");
+
+    const overlay = document.getElementById("overlay");
+    const modalText = document.getElementById("modalText");
+    const cancelLoseBtn = document.getElementById("cancelLoseBtn");
+    const confirmLoseBtn = document.getElementById("confirmLoseBtn");
+
+    const copyInviteBtn = document.getElementById("copyInviteBtn");
+    const waInviteBtn = document.getElementById("waInviteBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const toastEl = document.getElementById("toast");
+
+    // ========= Theme / Sound =========
     function loadTheme(){
       const saved = localStorage.getItem(THEME_KEY);
       document.documentElement.setAttribute("data-theme", saved === "light" ? "light" : "dark");
@@ -130,29 +576,22 @@
       const next = cur === "dark" ? "light" : "dark";
       document.documentElement.setAttribute("data-theme", next);
       localStorage.setItem(THEME_KEY, next);
+      toast(next === "dark" ? "Modo oscuro" : "Modo claro");
     }
-    document.getElementById("themeBtn").addEventListener("click", toggleTheme);
+    themeBtn.addEventListener("click", toggleTheme);
     loadTheme();
 
-    // params
-    const url = new URL(location.href);
-    const room = (url.searchParams.get("room") || "").trim();
-    const role = (url.searchParams.get("role") || "player").trim().toLowerCase();
-    document.getElementById("room").textContent = room || "—";
-    document.getElementById("role").textContent = room ? role : "—";
-    document.getElementById("hint").textContent = room ? "Entraste a la sala. A jugar." : "Falta ?room=...";
-
-    // sound (sintetizado)
     let soundEnabled = (localStorage.getItem(SOUND_KEY) ?? "1") === "1";
-    const soundBtn = document.getElementById("soundBtn");
-    function syncSound(){ soundBtn.textContent = soundEnabled ? "🔊" : "🔇"; }
-    syncSound();
+    function syncSoundIcon(){ soundBtn.textContent = soundEnabled ? "🔊" : "🔇"; }
+    syncSoundIcon();
     soundBtn.addEventListener("click", ()=>{
       soundEnabled = !soundEnabled;
       localStorage.setItem(SOUND_KEY, soundEnabled ? "1" : "0");
-      syncSound();
+      syncSoundIcon();
+      toast(soundEnabled ? "Sonido ON" : "Sonido OFF");
     });
 
+    // tiny synth (sin assets)
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let ac = null;
     function ensureAudio(){
@@ -160,6 +599,19 @@
       if (!ac) ac = new AudioCtx();
       if (ac.state === "suspended") ac.resume().catch(()=>{});
       return ac;
+    }
+    function beep(freq=440, dur=0.05, type="sine", gain=0.05){
+      const ctx = ensureAudio(); if (!ctx) return;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.value = gain;
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + dur);
+    }
+    function tickSound(){
+      // tick corto
+      beep(1200, 0.02, "square", 0.02);
     }
     function whoosh(){
       const ctx = ensureAudio(); if (!ctx) return;
@@ -181,24 +633,444 @@
       o.type = "sine";
       o.frequency.setValueAtTime(120, ctx.currentTime);
       o.frequency.exponentialRampToValueAtTime(55, ctx.currentTime + 0.22);
-      g.gain.setValueAtTime(0.12, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      g.gain.setValueAtTime(0.14, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
       o.connect(g); g.connect(ctx.destination);
-      o.start(); o.stop(ctx.currentTime + 0.28);
-      if (navigator.vibrate) navigator.vibrate([20, 30, 40]);
+      o.start(); o.stop(ctx.currentTime + 0.3);
+      // golpe extra
+      setTimeout(()=>beep(240, 0.05, "square", 0.05), 20);
+      if (navigator.vibrate) navigator.vibrate([30, 40, 60]);
+    }
+    window.addEventListener("pointerdown", ()=>{ ensureAudio(); }, { once:true });
+
+    // ========= UI helpers =========
+    function toast(msg){
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      clearTimeout(toastEl._t);
+      toastEl._t = setTimeout(()=>toastEl.classList.remove("show"), 1400);
+    }
+    function fxBoom(){
+      mainCard.classList.remove("boom"); mainCard.offsetHeight; mainCard.classList.add("boom");
+    }
+    function fxShake(){
+      mainCard.classList.remove("shake"); mainCard.offsetHeight; mainCard.classList.add("shake");
     }
 
-    // test button
-    const panel = document.getElementById("panel");
-    document.getElementById("testBtn").addEventListener("click", ()=>{
-      // unlock audio on first gesture
-      ensureAudio();
-      panel.classList.remove("boom"); panel.offsetHeight; panel.classList.add("boom");
-      whoosh(); setTimeout(explosion, 140);
+    // ========= Game helpers =========
+    function alivePlayers(){
+      return state.players.filter(p => p.alive);
+    }
+    function clampTurnIdx(){
+      const alive = alivePlayers();
+      if (alive.length === 0) state.turnIdx = 0;
+      else state.turnIdx = ((state.turnIdx % alive.length) + alive.length) % alive.length;
+    }
+    function currentPlayer(){
+      const alive = alivePlayers();
+      if (alive.length === 0) return null;
+      clampTurnIdx();
+      return alive[state.turnIdx] || null;
+    }
+    function pickPrompt(){
+      const list = PROMPTS[state.mode] || PROMPTS.classic;
+      const idx = Math.floor(Math.random() * list.length);
+      return list[idx];
+    }
+    function randomDurationMs(){
+      const [a,b] = TIME_RANGES[state.timePreset] || TIME_RANGES.mid;
+      const secs = a + Math.random() * (b - a);
+      return Math.round(secs * 1000);
+    }
+    function formatMs(ms){
+      const s = Math.max(0, Math.ceil(ms / 1000));
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      if (m <= 0) return String(r);
+      return m + ":" + String(r).padStart(2, "0");
+    }
+
+    // ========= Render =========
+    function renderPlayers(){
+      const alive = alivePlayers();
+      alivePill.textContent = `${alive.length} vivos`;
+      playersList.innerHTML = "";
+
+      state.players.forEach(p=>{
+        const div = document.createElement("div");
+        div.className = "player";
+        const left = document.createElement("div");
+        left.innerHTML = `<b>${escapeHtml(p.name)}</b><div><small>${p.alive ? "en juego" : "eliminado"} · KO ${p.losses||0}</small></div>`;
+        const pill = document.createElement("span");
+        pill.className = "pill" + (p.alive ? "" : " out");
+        pill.textContent = p.alive ? "VIVO" : "OUT";
+        div.appendChild(left);
+        div.appendChild(pill);
+        playersList.appendChild(div);
+      });
+    }
+
+    function renderTop(){
+      roomTxt.textContent = state.room;
+      modeTxt.textContent =
+        state.mode === "classic" ? "Clásico" :
+        state.mode === "categories" ? "Categorías" :
+        "Hot";
+      metaText.textContent = state.started ? "Partida en curso." : "Configura jugadores y empieza.";
+      startBtn.textContent = state.started ? "⏸️ Stop" : "▶️ Start";
+
+      modeSel.value = state.mode;
+      timeSel.value = state.timePreset;
+      playersInput.value = state.players.map(p=>p.name).join(", ");
+    }
+
+    function setStatus(kind, text){
+      statusTxt.textContent = text;
+      statusDot.classList.remove("armed", "dead");
+      if (kind === "armed") statusDot.classList.add("armed");
+      if (kind === "dead") statusDot.classList.add("dead");
+    }
+
+    function renderMain(){
+      const alive = alivePlayers();
+
+      if (!state.started){
+        turnTitle.textContent = "Listo para empezar";
+        promptEl.textContent = "Pulsa “Start” arriba, o abre ⚙️ para meter jugadores.";
+        timeTxt.textContent = "—";
+        timeHint.textContent = "La bomba no está armada";
+        barFill.style.width = "0%";
+        nextBtn.disabled = true;
+        explodeBtn.disabled = true;
+        setStatus("idle", "Idle");
+        return;
+      }
+
+      if (alive.length <= 1){
+        const winner = alive[0]?.name || "Nadie";
+        turnTitle.textContent = `🏆 Ganador: ${winner}`;
+        promptEl.textContent = "Partida terminada. Puedes hacer Reset o Start para nueva.";
+        timeTxt.textContent = "—";
+        timeHint.textContent = "Fin";
+        barFill.style.width = "0%";
+        nextBtn.disabled = true;
+        explodeBtn.disabled = true;
+        setStatus("idle", "Fin");
+        return;
+      }
+
+      const p = currentPlayer();
+      turnTitle.textContent = `Turno: ${p ? p.name : "—"}`;
+      promptEl.textContent = state.currentPrompt || "—";
+
+      if (!state.armed){
+        timeTxt.textContent = "—";
+        timeHint.textContent = "Pulsa “Pasar bomba” para armar y pasar";
+        barFill.style.width = "0%";
+        nextBtn.disabled = false;
+        explodeBtn.disabled = false;
+        setStatus("idle", "Lista");
+      } else {
+        const now = Date.now();
+        const left = Math.max(0, state.endsAt - now);
+        timeTxt.textContent = formatMs(left);
+        timeHint.textContent = "¡Rápido! Pasa el móvil…";
+        const prog = 1 - (left / Math.max(1, state.durationMs));
+        barFill.style.width = Math.max(0, Math.min(1, prog)) * 100 + "%";
+        nextBtn.disabled = false;
+        explodeBtn.disabled = false;
+        setStatus("armed", "Armada");
+      }
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, c=>({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[c]));
+    }
+
+    // ========= Host panel / setup =========
+    hostToggleBtn.addEventListener("click", ()=>{
+      const show = hostPanel.style.display === "none";
+      hostPanel.style.display = show ? "grid" : "none";
+      toast(show ? "Panel host" : "Panel oculto");
     });
 
-    // unlock audio on first user gesture
-    window.addEventListener("pointerdown", ()=>{ ensureAudio(); }, { once:true });
+    function setPlayersFromInput(){
+      const raw = playersInput.value.trim();
+      const names = raw
+        .split(",")
+        .map(s => s.trim())
+        .filter(Boolean)
+        .slice(0, 24);
+
+      // mantener losses si ya existían
+      const prev = new Map(state.players.map(p => [p.name.toLowerCase(), p]));
+      state.players = names.map(n=>{
+        const old = prev.get(n.toLowerCase());
+        return old ? { ...old, name: n } : { name: n, alive: true, losses: 0 };
+      });
+
+      // si no hay jugadores, pon 2 dummy
+      if (state.players.length === 0){
+        state.players = [
+          {name:"Jugador 1", alive:true, losses:0},
+          {name:"Jugador 2", alive:true, losses:0},
+        ];
+      }
+
+      // al configurar, si no empezó, deja turnIdx a 0
+      if (!state.started){
+        state.turnIdx = 0;
+        state.armed = false;
+      }
+      save();
+      renderAll();
+    }
+
+    playersInput.addEventListener("change", setPlayersFromInput);
+    modeSel.addEventListener("change", ()=>{
+      state.mode = modeSel.value;
+      if (state.started){
+        state.currentPrompt = pickPrompt();
+      }
+      save(); renderAll();
+    });
+    timeSel.addEventListener("change", ()=>{
+      state.timePreset = timeSel.value;
+      save(); renderAll();
+    });
+
+    // invite link (solo acceso)
+    function inviteLink(){
+      const base = location.origin + location.pathname;
+      const u = new URL(base);
+      u.searchParams.set("room", state.room);
+      return u.toString();
+    }
+    async function copy(text){
+      try { await navigator.clipboard.writeText(text); return true; }
+      catch { return false; }
+    }
+    copyInviteBtn.addEventListener("click", async ()=>{
+      const ok = await copy(inviteLink());
+      toast(ok ? "Link copiado" : "No pude copiar");
+    });
+    waInviteBtn.addEventListener("click", ()=>{
+      const msg = encodeURIComponent(`🎮 La Bomba (acceso):\n${inviteLink()}\n\n(OJO: sin backend, se juega en el móvil del host)`);
+      window.open(`https://wa.me/?text=${msg}`, "_blank");
+    });
+
+    resetBtn.addEventListener("click", ()=>{
+      // reset “duro”
+      const keep = { room: state.room };
+      localStorage.removeItem(LS_KEY);
+      Object.assign(state, {
+        room: keep.room,
+        mode: "classic",
+        timePreset: "mid",
+        players: [],
+        started: false,
+        turnIdx: 0,
+        armed: false,
+        endsAt: 0,
+        durationMs: 0,
+        currentPrompt: "",
+        lastTick: 0
+      });
+      state.players = [
+        {name:"Jugador 1", alive:true, losses:0},
+        {name:"Jugador 2", alive:true, losses:0},
+      ];
+      save();
+      renderAll();
+      toast("Reset ✅");
+    });
+
+    // ========= Game actions =========
+    function startGame(){
+      // validar players
+      setPlayersFromInput();
+      state.players.forEach(p=>{ p.alive = true; p.losses = p.losses || 0; });
+      state.started = true;
+      state.turnIdx = 0;
+      state.armed = false;
+      state.currentPrompt = pickPrompt();
+      state.endsAt = 0;
+      state.durationMs = 0;
+      save();
+      renderAll();
+      beep(740, 0.06, "sine", 0.06);
+      toast("Start");
+    }
+
+    function stopGame(){
+      state.started = false;
+      state.armed = false;
+      state.endsAt = 0;
+      state.durationMs = 0;
+      save();
+      renderAll();
+      beep(220, 0.07, "sine", 0.06);
+      toast("Stop");
+    }
+
+    startBtn.addEventListener("click", ()=>{
+      ensureAudio();
+      if (!state.started) startGame();
+      else stopGame();
+    });
+
+    function armIfNeeded(){
+      if (state.armed) return;
+      state.durationMs = randomDurationMs();
+      state.endsAt = Date.now() + state.durationMs;
+      state.armed = true;
+      state.lastTick = Date.now();
+      save();
+    }
+
+    function nextTurn(){
+      if (!state.started) return;
+      const alive = alivePlayers();
+      if (alive.length <= 1) return;
+
+      // arma si no estaba armada (la primera vez)
+      const wasArmed = state.armed;
+      armIfNeeded();
+
+      // pasar turno
+      state.turnIdx++;
+      clampTurnIdx();
+      state.currentPrompt = pickPrompt();
+      save();
+
+      fxBoom();
+      if (!wasArmed){
+        whoosh();
+        toast("Bomba armada 💣");
+      }else{
+        beep(520, 0.04, "triangle", 0.05);
+      }
+      renderAll();
+    }
+
+    nextBtn.addEventListener("click", ()=>{
+      ensureAudio();
+      nextTurn();
+    });
+
+    // ========= Explosion =========
+    let pendingLoser = null;
+
+    function openLoseModal(){
+      const p = currentPlayer();
+      pendingLoser = p;
+      modalText.textContent = `Perdió: ${p ? p.name : "—"} (¿confirmas?)`;
+      overlay.style.display = "grid";
+    }
+    function closeLoseModal(){
+      overlay.style.display = "none";
+      pendingLoser = null;
+    }
+
+    cancelLoseBtn.addEventListener("click", ()=>{
+      closeLoseModal();
+      toast("Ok, seguimos");
+    });
+
+    confirmLoseBtn.addEventListener("click", ()=>{
+      if (!pendingLoser) return closeLoseModal();
+
+      // eliminar
+      pendingLoser.alive = false;
+      pendingLoser.losses = (pendingLoser.losses || 0) + 1;
+
+      // preparar siguiente ronda
+      state.armed = false;
+      state.endsAt = 0;
+      state.durationMs = 0;
+
+      // el turno siguiente: si el actual se fue, no incrementes “extra”, solo clampa
+      clampTurnIdx();
+      state.currentPrompt = pickPrompt();
+
+      save();
+      closeLoseModal();
+      renderAll();
+
+      toast("Eliminado ✅");
+
+      // si queda 1, fin
+      const alive = alivePlayers();
+      if (alive.length <= 1){
+        fxBoom();
+        beep(880, 0.08, "triangle", 0.07);
+      }
+    });
+
+    function explodeNow(){
+      if (!state.started) return;
+      fxShake();
+      explosion();
+      setStatus("dead", "BOOM");
+      openLoseModal();
+    }
+
+    explodeBtn.addEventListener("click", ()=>{
+      ensureAudio();
+      explodeNow();
+    });
+
+    // ========= Ticker =========
+    function tick(){
+      if (state.started && state.armed){
+        const now = Date.now();
+        const left = state.endsAt - now;
+
+        // tick cerca del final (últimos 5s)
+        if (left <= 5000){
+          if (now - state.lastTick >= 250){
+            state.lastTick = now;
+            tickSound();
+            if (navigator.vibrate) navigator.vibrate(10);
+          }
+        }
+
+        if (left <= 0){
+          // explosión
+          state.armed = false;
+          save();
+          renderAll();
+          explodeNow();
+          return; // no seguir
+        }
+      }
+      renderMain();
+      requestAnimationFrame(tick);
+    }
+
+    // ========= Initial =========
+    (function init(){
+      roomTxt.textContent = room || "LOCAL";
+      // cargar persisted
+      if (!load()){
+        // estado por defecto
+        state.players = [
+          {name:"Jugador 1", alive:true, losses:0},
+          {name:"Jugador 2", alive:true, losses:0},
+        ];
+        save();
+      }
+      renderAll();
+      requestAnimationFrame(tick);
+    })();
+
+    function renderAll(){
+      renderTop();
+      renderPlayers();
+      renderMain();
+    }
   </script>
 </body>
 </html>
