@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sky Strike Retro Deluxe V2</title>
+  <title>Sky Strike Retro Deluxe</title>
   <style>
     :root{
       --bg:#0b1015;
@@ -12,6 +12,10 @@
       --line:#2f3d4d;
       --text:#e2eeff;
       --muted:#93a9c5;
+      --accent:#6aa8ff;
+      --accent2:#7dffbe;
+      --warn:#ffb159;
+      --danger:#ff6f61;
     }
     *{box-sizing:border-box}
     html,body{
@@ -34,8 +38,9 @@
       width:min(100%,1080px);
       height:min(100%,960px);
       display:grid;
-      grid-template-rows:auto 1fr auto;
+      grid-template-rows:auto minmax(0,1fr) auto;
       gap:10px;
+      min-height:0;
     }
     .topbar,.bottombar{
       background:linear-gradient(180deg,var(--panel),var(--panel2));
@@ -94,7 +99,8 @@
       position:relative;
       display:grid;
       place-items:center;
-      min-height:440px;
+      min-height:0;
+      padding:12px;
       background:
         radial-gradient(circle at center,rgba(255,255,255,.05),transparent 55%),
         linear-gradient(180deg,#161f29,#0b1016);
@@ -105,7 +111,10 @@
     }
     .cabinet{
       position:relative;
-      width:min(100%,760px);
+      height:100%;
+      width:auto;
+      max-width:100%;
+      max-height:100%;
       aspect-ratio:2/3;
       border-radius:24px;
       overflow:hidden;
@@ -139,7 +148,7 @@
         rgba(0,0,0,0) 4px
       );
       mix-blend-mode:soft-light;
-      opacity:.22;
+      opacity:.2;
     }
     .vignette::before{
       content:"";
@@ -160,7 +169,7 @@
     }
     .overlay.hidden{opacity:0;pointer-events:none}
     .card{
-      width:min(100%,500px);
+      width:min(100%,470px);
       background:rgba(10,14,20,.94);
       border:2px solid #46566e;
       border-radius:16px;
@@ -244,8 +253,8 @@
     <div class="shell">
       <div class="topbar">
         <div class="brand">
-          <h1>Sky Strike Retro Deluxe V2</h1>
-          <p>Archivo nuevo: mejora visual de sprites, explosiones y feedback, sin rebajar la dificultad arcade.</p>
+          <h1>Sky Strike Retro Deluxe</h1>
+          <p>Versión revisada y cerrada: área jugable estable, archivo completo y base limpia para seguir mejorando.</p>
         </div>
         <div class="hud">
           <div class="hud-card"><span class="label">Score</span><span class="value" id="scoreHud">000000</span></div>
@@ -262,10 +271,10 @@
           <canvas id="game" width="384" height="576"></canvas>
           <div id="overlay" class="overlay">
             <div class="card">
-              <h2 id="overlayTitle">Sky Strike Retro Deluxe V2</h2>
-              <p id="overlayText">Versión 2 centrada en sprites, explosiones y legibilidad visual. Mantiene la presión arcade y el ritmo del juego.</p>
+              <h2 id="overlayTitle">Sky Strike Retro Deluxe</h2>
+              <p id="overlayText">Shooter vertical arcade original con scroll multicapa, avión vivo, impactos potentes, enemigos variados, power-ups y boss con barra de vida.</p>
               <p><strong>Teclado:</strong> flechas o WASD · <strong>Pausa:</strong> P · <strong>Start:</strong> Enter</p>
-              <p><strong>Móvil:</strong> arrastra sobre el juego o usa los botones.</p>
+              <p><strong>Móvil:</strong> arrastra sobre el juego o usa los botones inferiores.</p>
               <div class="actions">
                 <button id="startBtn">Jugar</button>
                 <button id="pauseBtn" class="secondary">Pausa</button>
@@ -277,7 +286,7 @@
 
       <div class="bottombar">
         <div class="help">
-          V2: sprites con más lectura, explosiones con anillos y capas, impactos más claros, sombras, mejores fogonazos y presencia visual más marcada.
+          Parallax multicapa, avión con inclinación y hélice, disparos con fogonazo, explosiones mejoradas, tres tipos de enemigos, pickups y boss con presencia visual.
         </div>
         <div class="mobile">
           <button class="pad secondary" data-dir="left">◀</button>
@@ -345,7 +354,8 @@
       farCtx.fillRect(0, 0, FAR_LAYER.width, FAR_LAYER.height);
       for(let y = 0; y < FAR_LAYER.height; y += 4){
         for(let x = 0; x < FAR_LAYER.width; x += 4){
-          farCtx.fillStyle = Math.random() < 0.5 ? '#35556d' : (Math.random() < 0.5 ? '#3e617c' : '#2e4c62');
+          const c = Math.random() < 0.5 ? '#35556d' : (Math.random() < 0.5 ? '#3e617c' : '#2e4c62');
+          farCtx.fillStyle = c;
           farCtx.fillRect(x, y, 4, 4);
         }
       }
@@ -445,7 +455,7 @@
       score: 0,
       stage: 1,
       lives: 3,
-      best: Number(localStorage.getItem('skyStrikeRetroDeluxeV2Best') || 0),
+      best: Number(localStorage.getItem('skyStrikeRetroDeluxeBest') || 0),
       weaponLevel: 1,
       shield: 0,
       worldY: 0,
@@ -467,8 +477,7 @@
       pickups: [],
       particles: [],
       flashes: [],
-      debris: [],
-      rings: []
+      debris: []
     };
 
     function updateHUD(){
@@ -505,8 +514,7 @@
         inv: 0,
         prop: 0,
         smokeCd: 0,
-        damageFlash: 0,
-        enginePulse: 0
+        damageFlash: 0
       };
     }
 
@@ -536,7 +544,6 @@
       state.particles = [];
       state.flashes = [];
       state.debris = [];
-      state.rings = [];
       resetPlayer();
       updateHUD();
       hideOverlay();
@@ -560,7 +567,7 @@
       state.mode = 'gameover';
       if(state.score > state.best){
         state.best = state.score;
-        localStorage.setItem('skyStrikeRetroDeluxeV2Best', String(state.best));
+        localStorage.setItem('skyStrikeRetroDeluxeBest', String(state.best));
       }
       updateHUD();
       showOverlay('Game Over', `Puntuación ${state.score}. Récord ${state.best}.`, 'Reiniciar');
@@ -569,10 +576,6 @@
     function setBanner(text, time = 1.6){
       state.bannerText = text;
       state.bannerTimer = time;
-    }
-
-    function spawnRing(x, y, color, maxRadius = 20, life = 0.22){
-      state.rings.push({ x, y, color, radius: 2, maxRadius, life, max: life });
     }
 
     function spawnFlash(x, y, size, color, life = 0.12){
@@ -638,26 +641,19 @@
       spawnFlash(x, y, 8, '#fff1bf', 0.09);
       spawnSparkBurst(x, y, '#ffd08d', 6, 95);
       spawnSmoke(x, y, 2, 10);
-      spawnRing(x, y, '#ffd08d', 10, 0.12);
     }
 
     function spawnExplosion(x, y, big = false){
-      spawnFlash(x, y, big ? 24 : 14, big ? '#ffe08c' : '#ffd59c', big ? 0.18 : 0.12);
-      spawnSparkBurst(x, y, big ? '#ffcf77' : '#ffb37c', big ? 24 : 12, big ? 180 : 120);
+      spawnFlash(x, y, big ? 22 : 13, big ? '#ffe08c' : '#ffd59c', big ? 0.18 : 0.12);
+      spawnSparkBurst(x, y, big ? '#ffcf77' : '#ffb37c', big ? 22 : 11, big ? 180 : 120);
       spawnSparkBurst(x, y, '#ff6a4d', big ? 18 : 8, big ? 150 : 90);
       spawnSmoke(x, y, big ? 14 : 6, big ? 30 : 18);
       spawnDebris(x, y, '#7d8388', big ? 10 : 4, big ? 90 : 45);
-      spawnRing(x, y, '#ffcf77', big ? 28 : 16, big ? 0.24 : 0.16);
-      spawnRing(x, y, '#ff6a4d', big ? 18 : 10, big ? 0.18 : 0.12);
       state.shake = Math.max(state.shake, big ? 10 : 4);
     }
 
     function spawnPickup(x, y, type = 'weapon'){
-      state.pickups.push({
-        x, y, r: 10, type,
-        vy: 48,
-        phase: rand(0, Math.PI * 2)
-      });
+      state.pickups.push({ x, y, r: 10, type, vy: 48, phase: rand(0, Math.PI * 2) });
     }
 
     function firePlayer(){
@@ -674,10 +670,9 @@
         state.bullets.push({ x: p.x - 8, y: baseY + 2, vx: -45, vy: speed + 20, r: 3, damage: 1 });
         state.bullets.push({ x: p.x + 8, y: baseY + 2, vx: 45, vy: speed + 20, r: 3, damage: 1 });
       }
-      p.recoil = 2.2;
-      spawnFlash(p.x, p.y - 19, 7, '#fff4bf', 0.06);
-      spawnSparkBurst(p.x, p.y - 18, '#dff7ff', 5, 58);
-      spawnRing(p.x, p.y - 18, '#c8f5ff', 8, 0.08);
+      p.recoil = 2;
+      spawnFlash(p.x, p.y - 19, 6, '#fff4bf', 0.06);
+      spawnSparkBurst(p.x, p.y - 18, '#dff7ff', 4, 55);
     }
 
     function fireEnemy(enemy){
@@ -710,7 +705,6 @@
         }
       }
       spawnFlash(enemy.x, enemy.y + 8, enemy.kind === 'boss' ? 10 : 6, '#ffcc87', 0.05);
-      spawnRing(enemy.x, enemy.y + 8, '#ffcc87', enemy.kind === 'boss' ? 12 : 8, 0.09);
     }
 
     function spawnEnemy(kind = 'scout'){
@@ -744,9 +738,7 @@
       } else if(kind === 'ace'){
         const side = Math.random() < 0.5 ? -1 : 1;
         state.enemies.push({
-          kind,
-          x: side < 0 ? 24 : GAME_W - 24,
-          y: -20,
+          kind, x: side < 0 ? 24 : GAME_W - 24, y: -20,
           r: 12,
           hp: 4 + Math.floor(state.stage * 0.5),
           maxHp: 4 + Math.floor(state.stage * 0.5),
@@ -787,7 +779,6 @@
         p.damageFlash = 0.5;
         spawnFlash(p.x, p.y, 16, '#9bffe3', 0.11);
         spawnSparkBurst(p.x, p.y, '#9bffe3', 12, 120);
-        spawnRing(p.x, p.y, '#9bffe3', 20, 0.18);
         state.shake = Math.max(state.shake, 4);
         updateHUD();
         return;
@@ -804,7 +795,7 @@
       state.score += value;
       if(state.score > state.best){
         state.best = state.score;
-        localStorage.setItem('skyStrikeRetroDeluxeV2Best', String(state.best));
+        localStorage.setItem('skyStrikeRetroDeluxeBest', String(state.best));
       }
       updateHUD();
     }
@@ -812,7 +803,7 @@
     function killEnemy(enemy, index){
       const isBoss = enemy.kind === 'boss';
       if(isBoss){
-        for(let i = 0; i < 8; i++){
+        for(let i = 0; i < 7; i++){
           spawnExplosion(enemy.x + rand(-28, 28), enemy.y + rand(-16, 16), true);
         }
         spawnPickup(enemy.x - 18, enemy.y, 'weapon');
@@ -861,10 +852,9 @@
       p.inv = Math.max(0, p.inv - dt);
       p.damageFlash = Math.max(0, p.damageFlash - dt);
       p.prop += dt * (18 + Math.abs(p.vx) * 0.03);
-      p.enginePulse += dt * 14;
       p.fireCd -= dt;
       const fireInterval = state.weaponLevel === 1 ? 0.18 : state.weaponLevel === 2 ? 0.14 : 0.11;
-      if(p.fireCd <= 0 || mobileFire){
+      if(p.fireCd <= 0){
         firePlayer();
         p.fireCd = fireInterval;
       }
@@ -917,6 +907,7 @@
         }
       }
       state.enemies = state.enemies.filter(e => e.y < GAME_H + 70 && e.x > -70 && e.x < GAME_W + 70);
+      state.bossActive = state.enemies.some(e => e.kind === 'boss');
     }
 
     function updateBullets(dt){
@@ -943,11 +934,6 @@
     function updateEffects(dt){
       for(const f of state.flashes) f.life -= dt;
       state.flashes = state.flashes.filter(f => f.life > 0);
-      for(const r of state.rings){
-        r.life -= dt;
-        r.radius += (r.maxRadius - r.radius) * Math.min(1, dt * 18);
-      }
-      state.rings = state.rings.filter(r => r.life > 0);
       for(const p of state.particles){
         p.vx *= p.drag;
         p.vy = p.vy * p.drag + p.gravity;
@@ -1008,7 +994,6 @@
           else if(item.type === 'life') state.lives = Math.min(5, state.lives + 1);
           spawnFlash(item.x, item.y, 16, '#b9ffdf', 0.12);
           spawnSparkBurst(item.x, item.y, '#b9ffdf', 10, 120);
-          spawnRing(item.x, item.y, '#b9ffdf', 18, 0.16);
           updateHUD();
         }
       }
@@ -1082,48 +1067,44 @@
       const p = state.player;
       if(!p) return;
       if(p.inv > 0 && ((p.inv * 20) | 0) % 2 === 0) return;
-      const bank = clamp(Math.round(p.roll * 2.4), -2, 2);
+      const bank = clamp(Math.round(p.roll * 2.2), -2, 2);
       const bob = Math.sin(state.time * 12) * 0.8;
       const propFrame = (p.prop | 0) % 2;
-      const engine = 1 + Math.sin(p.enginePulse) * 0.25;
       ctx.save();
       ctx.translate(Math.round(p.x), Math.round(p.y + bob + p.recoil));
       ctx.rotate(p.roll * 0.08);
       ctx.fillStyle = 'rgba(0,0,0,.28)';
-      ctx.fillRect(-13, 13, 26, 4);
+      ctx.fillRect(-11, 12, 22, 4);
       if(state.shield > 0){
         ctx.strokeStyle = 'rgba(125,255,190,.85)';
         ctx.lineWidth = 1;
-        ctx.strokeRect(-15, -17, 30, 34);
+        ctx.strokeRect(-14, -16, 28, 32);
       }
-      const leftWing = 12 + (bank < 0 ? 3 : bank > 0 ? -2 : 0);
-      const rightWing = 12 + (bank > 0 ? 3 : bank < 0 ? -2 : 0);
+      const leftWing = 11 + (bank < 0 ? 3 : bank > 0 ? -2 : 0);
+      const rightWing = 11 + (bank > 0 ? 3 : bank < 0 ? -2 : 0);
       const wingLift = bank !== 0 ? bank : 0;
-      px(ctx, -2, -16, 4, 25, '#c9d4e1');
-      px(ctx, -3, -13, 6, 5, '#eef4fb');
-      px(ctx, -5, 8, 10, 4, '#99a6b7');
-      px(ctx, -leftWing - 3, -1 - wingLift, leftWing + 1, 4, '#bfc8d3');
-      px(ctx, 2, -1 + wingLift, rightWing + 1, 4, '#bfc8d3');
-      px(ctx, -leftWing + 2, 2 - wingLift, 5, 2, '#8e99a8');
-      px(ctx, rightWing - 5, 2 + wingLift, 5, 2, '#8e99a8');
-      px(ctx, -8, 10, 3, 6, '#aeb8c6');
-      px(ctx, 5, 10, 3, 6, '#aeb8c6');
-      px(ctx, -2, -7, 4, 7, '#58b4ff');
-      px(ctx, -1, -18, 2, 3, '#f7f1cc');
+      px(ctx, -2, -15, 4, 22, '#c7d2df');
+      px(ctx, -3, -11, 6, 4, '#dbe6f4');
+      px(ctx, -4, 7, 8, 4, '#98a5b6');
+      px(ctx, -leftWing - 2, 0 - wingLift, leftWing, 4, '#bcc6d2');
+      px(ctx, 2, 0 + wingLift, rightWing, 4, '#bcc6d2');
+      px(ctx, -leftWing + 1, 2 - wingLift, 4, 2, '#8e99a8');
+      px(ctx, rightWing - 5, 2 + wingLift, 4, 2, '#8e99a8');
+      px(ctx, -7, 9, 3, 5, '#aeb8c6');
+      px(ctx, 4, 9, 3, 5, '#aeb8c6');
+      px(ctx, -2, -6, 4, 6, '#5eb3ff');
+      px(ctx, -1, -17, 2, 3, '#f7f1cc');
       if(propFrame === 0){
-        px(ctx, -9, -16, 18, 1, '#f2f2f2');
-        px(ctx, -6, -17, 12, 1, '#cfd5da');
+        px(ctx, -8, -16, 16, 1, '#f2f2f2');
+        px(ctx, -5, -17, 10, 1, '#cfd5da');
       } else {
-        px(ctx, -1, -23, 2, 12, '#e8eef3');
+        px(ctx, -1, -22, 2, 11, '#e8eef3');
       }
-      ctx.globalAlpha = 0.55;
-      px(ctx, -3, 15, 6, 2, '#ffd07c');
-      ctx.globalAlpha = 1;
-      px(ctx, -2, 15, 4, 2, '#ffca67');
-      px(ctx, -1, 17, 2, Math.max(2, Math.round(2 * engine)), '#ff7d35');
+      px(ctx, -2, 14, 4, 2, '#ffca67');
+      px(ctx, -1, 16, 2, 2, '#ff7d35');
       if(p.damageFlash > 0){
         ctx.globalAlpha = Math.min(0.8, p.damageFlash);
-        px(ctx, -13, -16, 26, 33, '#ffffff');
+        px(ctx, -12, -15, 24, 30, '#ffffff');
         ctx.globalAlpha = 1;
       }
       ctx.restore();
@@ -1134,12 +1115,11 @@
       ctx.translate(Math.round(e.x), Math.round(e.y));
       ctx.fillStyle = 'rgba(0,0,0,.24)';
       ctx.fillRect(-10, 10, 20, 3);
-      px(ctx, -2, -10, 4, 18, '#cdd4db');
-      px(ctx, -9, -2, 18, 4, '#b6bcc4');
-      px(ctx, -6, -7, 12, 2, '#eef3fa');
-      px(ctx, -5, 3, 10, 2, '#7d8897');
-      px(ctx, -1, 8, 2, 4, '#ff7f39');
-      px(ctx, -2, -11, 4, 2, '#f15f5f');
+      px(ctx, -2, -9, 4, 16, '#c9d0d7');
+      px(ctx, -8, -2, 16, 4, '#aeb4bc');
+      px(ctx, -5, -6, 10, 2, '#dce3ea');
+      px(ctx, -1, 7, 2, 3, '#ff7f39');
+      px(ctx, -2, -10, 4, 2, '#f15f5f');
       ctx.restore();
     }
 
@@ -1148,19 +1128,17 @@
       ctx.translate(Math.round(e.x), Math.round(e.y));
       ctx.fillStyle = 'rgba(0,0,0,.26)';
       ctx.fillRect(-16, 12, 32, 4);
-      px(ctx, -11, -11, 22, 20, '#66765c');
-      px(ctx, -15, -3, 30, 7, '#80906f');
-      px(ctx, -7, -13, 14, 5, '#a3b18d');
-      px(ctx, -4, -5, 8, 4, '#31372d');
-      px(ctx, -9, 8, 5, 4, '#59654f');
-      px(ctx, 4, 8, 5, 4, '#59654f');
-      px(ctx, -15, -1, 3, 4, '#cfd6c0');
-      px(ctx, 12, -1, 3, 4, '#cfd6c0');
+      px(ctx, -10, -10, 20, 18, '#67765d');
+      px(ctx, -14, -2, 28, 6, '#80906f');
+      px(ctx, -6, -12, 12, 5, '#99a983');
+      px(ctx, -4, -5, 8, 4, '#2e332b');
+      px(ctx, -8, 8, 4, 4, '#59654f');
+      px(ctx, 4, 8, 4, 4, '#59654f');
       const ratio = Math.max(0, e.hp / e.maxHp);
       ctx.fillStyle = 'rgba(0,0,0,.35)';
-      ctx.fillRect(-12, -17, 24, 3);
+      ctx.fillRect(-12, -16, 24, 3);
       ctx.fillStyle = '#92ffb6';
-      ctx.fillRect(-12, -17, 24 * ratio, 3);
+      ctx.fillRect(-12, -16, 24 * ratio, 3);
       ctx.restore();
     }
 
@@ -1170,36 +1148,30 @@
       ctx.rotate(e.vx * 0.0028);
       ctx.fillStyle = 'rgba(0,0,0,.24)';
       ctx.fillRect(-10, 10, 20, 3);
-      px(ctx, -2, -11, 4, 20, '#f2d161');
-      px(ctx, -10, -2, 20, 3, '#dd5648');
-      px(ctx, -7, -7, 14, 2, '#ef8c7d');
-      px(ctx, -5, 3, 10, 2, '#9f2f27');
-      px(ctx, -1, 9, 2, 4, '#ff7a2d');
+      px(ctx, -2, -10, 4, 18, '#f2d161');
+      px(ctx, -9, -1, 18, 3, '#dd5648');
+      px(ctx, -6, -6, 12, 2, '#ef8c7d');
+      px(ctx, -1, 8, 2, 3, '#ff7a2d');
       ctx.restore();
     }
 
     function drawBoss(e){
       ctx.save();
       ctx.translate(Math.round(e.x), Math.round(e.y));
-      ctx.fillStyle = 'rgba(0,0,0,.28)';
-      ctx.fillRect(-48, 30, 96, 6);
-      px(ctx, -44, -13, 88, 28, '#5f6671');
-      px(ctx, -34, -26, 68, 13, '#747c87');
-      px(ctx, -18, -36, 36, 11, '#8a929d');
-      px(ctx, -39, 15, 16, 15, '#535a64');
-      px(ctx, 23, 15, 16, 15, '#535a64');
-      px(ctx, -46, -5, 13, 15, '#737c87');
-      px(ctx, 33, -5, 13, 15, '#737c87');
-      px(ctx, -26, -7, 14, 9, '#2b3037');
-      px(ctx, 12, -7, 14, 9, '#2b3037');
-      px(ctx, -6, -5, 12, 12, '#ff3f3f');
-      px(ctx, -9, -36, 18, 6, '#9a9fa8');
-      px(ctx, -4, -43, 8, 7, '#80858e');
-      px(ctx, -31, 30, 10, 8, '#292d34');
-      px(ctx, 21, 30, 10, 8, '#292d34');
-      px(ctx, -34, -2, 5, 5, '#c8cfdb');
-      px(ctx, 29, -2, 5, 5, '#c8cfdb');
-      ctx.restore();
+      px(ctx, -42, -12, 84, 26, '#5f6671');
+      px(ctx, -32, -24, 64, 12, '#747c87');
+      px(ctx, -16, -34, 32, 10, '#8a929d');
+      px(ctx, -36, 14, 14, 14, '#535a64');
+      px(ctx, 22, 14, 14, 14, '#535a64');
+      px(ctx, -44, -4, 12, 14, '#737c87');
+      px(ctx, 32, -4, 12, 14, '#737c87');
+      px(ctx, -24, -6, 12, 8, '#2b3037');
+      px(ctx, 12, -6, 12, 8, '#2b3037');
+      px(ctx, -5, -4, 10, 10, '#ff3f3f');
+      px(ctx, -8, -35, 16, 6, '#9a9fa8');
+      px(ctx, -4, -42, 8, 7, '#80858e');
+      px(ctx, -30, 28, 8, 8, '#292d34');
+      px(ctx, 22, 28, 8, 8, '#292d34');
     }
 
     function drawEnemy(enemy){
@@ -1259,14 +1231,6 @@
     }
 
     function drawEffects(){
-      for(const r of state.rings){
-        ctx.globalAlpha = Math.max(0, r.life / r.max) * 0.9;
-        ctx.strokeStyle = r.color;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
-        ctx.stroke();
-      }
       for(const f of state.flashes){
         ctx.globalAlpha = Math.max(0, f.life / f.max);
         ctx.fillStyle = f.color;
@@ -1406,7 +1370,7 @@
     canvas.addEventListener('pointermove', e => {
       if(pointerActive) setPointerPos(e);
     });
-    window.addEventListener('pointerup', () => { pointerActive = false; });
+    window.addEventListener('pointerup', () => { pointerActive = false; mobileFire = false; });
 
     document.querySelectorAll('[data-dir]').forEach(btn => {
       const dir = btn.dataset.dir;
@@ -1437,8 +1401,9 @@
     });
 
     updateHUD();
-    showOverlay('Sky Strike Retro Deluxe V2', 'Versión 2 centrada en sprites, explosiones y legibilidad visual. Mantiene la presión arcade y el ritmo del juego.', 'Jugar');
+    showOverlay('Sky Strike Retro Deluxe', 'Shooter vertical arcade original con scroll multicapa, avión vivo, impactos potentes, enemigos variados, power-ups y boss con barra de vida.', 'Jugar');
     requestAnimationFrame(loop);
   </script>
 </body>
 </html>
+
