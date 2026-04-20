@@ -1,99 +1,93 @@
 window.SpritePainter = (() => {
-  function text(ctx, text, x, y, size, fill, stroke = '#001', align = 'left') {
+
+  function drawCrowd(ctx, x, y, s) {
+    const cw = 36 * s;
+    const ch = 22 * s;
+    ctx.fillStyle = '#efdcc0';
+    ctx.fillRect(x, y - ch, cw, ch);
+    const cols = ['#ff5d73', '#3cc8ff', '#ffd541', '#35d070', '#ffffff', '#b587ff'];
+    for (let i = 0; i < 16; i++) {
+      const px = x + 3 + (i * 9) % Math.max(10, cw - 8);
+      const py = y - ch + 3 + ((i * 13) % Math.max(10, ch - 8));
+      ctx.fillStyle = cols[i % cols.length];
+      ctx.fillRect(px, py + 5, 5, 7);
+      ctx.fillStyle = '#f4cfb0';
+      ctx.fillRect(px + 1, py, 3, 4);
+    }
+  }
+
+  function drawRaceCar(ctx, x, y, s, color) {
+    const cw = 56 * s;
+    const ch = 30 * s;
     ctx.save();
-    ctx.font = `bold ${size}px Arial`;
-    ctx.textAlign = align;
-    ctx.lineWidth = Math.max(2, size * 0.16);
-    ctx.strokeStyle = stroke;
-    ctx.strokeText(text, x, y);
-    ctx.fillStyle = fill;
-    ctx.fillText(text, x, y);
+    ctx.translate(x, y);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(-cw * 0.55, ch * 0.05, cw * 0.18, ch * 0.45);
+    ctx.fillRect(cw * 0.37, ch * 0.05, cw * 0.18, ch * 0.45);
+    const g = ctx.createLinearGradient(0, -ch * 0.6, 0, ch * 0.4);
+    g.addColorStop(0, '#fff');
+    g.addColorStop(0.18, color);
+    g.addColorStop(1, '#7c1010');
+    ctx.fillStyle = g;
+    ctx.fillRect(-cw * 0.27, -ch * 0.42, cw * 0.54, ch * 0.82);
+    ctx.fillRect(-cw * 0.10, -ch * 0.66, cw * 0.20, ch * 0.24);
+    ctx.fillStyle = '#dff6ff';
+    ctx.fillRect(-cw * 0.14, -ch * 0.26, cw * 0.28, ch * 0.12);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(-cw * 0.38, -ch * 0.02, cw * 0.76, ch * 0.08);
+    ctx.fillStyle = '#ffba08';
+    ctx.fillRect(-cw * 0.05, ch * 0.29, cw * 0.10, ch * 0.11);
     ctx.restore();
   }
 
-  function drawSky(ctx, w, h, horizonCurve, skyScroll) {
-    const g = ctx.createLinearGradient(0, 0, 0, h * 0.65);
-    g.addColorStop(0, '#2028a8');
-    g.addColorStop(0.28, '#7834bf');
-    g.addColorStop(0.60, '#ff5f9f');
-    g.addColorStop(1, '#ffb04d');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
-
-    for (let i = 0; i < 5; i++) {
-      const y = h * 0.09 + i * h * 0.06;
-      ctx.strokeStyle = i % 2 === 0 ? 'rgba(255,188,120,0.45)' : 'rgba(255,128,192,0.35)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      for (let x = 0; x <= w; x += 20) {
-        const yy = y + Math.sin((x * 0.012) + i * 0.9 + skyScroll * 0.04) * (5 + i);
-        if (x === 0) ctx.moveTo(x, yy);
-        else ctx.lineTo(x, yy);
-      }
-      ctx.stroke();
-    }
-
-    const sunX = w * 0.5 + horizonCurve * w * 0.12;
-    const sunY = h * 0.31;
-    const sunR = h * 0.14;
-    ctx.fillStyle = '#ffe85c';
-    ctx.beginPath();
-    ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = '#ff9d00';
-    ctx.lineWidth = Math.max(2, h * 0.004);
-    for (let i = -3; i <= 3; i++) {
-      const yy = sunY + i * sunR * 0.18;
-      ctx.beginPath();
-      ctx.moveTo(sunX - sunR * 0.8, yy);
-      ctx.lineTo(sunX + sunR * 0.8, yy);
-      ctx.stroke();
-    }
-
-    const base = h * 0.50;
-    const shift = horizonCurve * w * 0.10;
-    const peaks = [
-      { x: w * 0.16 + shift * 0.5, hh: h * 0.11, c: '#4c2b8a' },
-      { x: w * 0.38 + shift * 0.3, hh: h * 0.18, c: '#5b34a3' },
-      { x: w * 0.52 + shift * 0.15, hh: h * 0.09, c: '#7040b7' },
-      { x: w * 0.71 + shift * 0.2, hh: h * 0.15, c: '#4c2b8a' },
-      { x: w * 0.90 + shift * 0.35, hh: h * 0.10, c: '#5b34a3' }
-    ];
-    for (const p of peaks) {
-      ctx.fillStyle = p.c;
-      ctx.beginPath();
-      ctx.moveTo(p.x - w * 0.16, base);
-      ctx.lineTo(p.x, base - p.hh);
-      ctx.lineTo(p.x + w * 0.18, base);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    const seaY = h * 0.49;
-    ctx.fillStyle = '#1787da';
-    ctx.fillRect(0, seaY, w, h * 0.09);
-    for (let i = 0; i < 6; i++) {
-      ctx.strokeStyle = i % 2 === 0 ? 'rgba(255,255,255,0.36)' : 'rgba(255,240,160,0.22)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      const yy = seaY + 8 + i * 11;
-      for (let x = 0; x <= w; x += 22) {
-        const wave = yy + Math.sin(x * 0.028 + i * 0.8 + skyScroll * 0.1) * 2;
-        if (x === 0) ctx.moveTo(x, wave);
-        else ctx.lineTo(x, wave);
-      }
-      ctx.stroke();
-    }
-  }
-
-  function drawPalm(ctx, x, y, s, side) {
+  function drawPlayerCar(ctx, w, h, playerX, shakeX, shakeY) {
+    const x = w * 0.5 + playerX * w * 0.19 + shakeX;
+    const y = h * 0.84 + shakeY;
+    const scale = Math.max(1, h / 480);
     ctx.save();
     ctx.translate(x, y);
-    ctx.scale(s, s);
-    ctx.fillStyle = '#ad7a4a';
-    ctx.fillRect(-4, -48, 8, 52);
-    ctx.fillStyle = '#7d5432';
-    for (let i = 0; i < 6; i++) ctx.fillRect(-4, -44 + i * 8, 8, 2);
-    ctx.strokeStyle = '#24d56f';
+    ctx.scale(scale, scale);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath();
+    ctx.ellipse(0, 30, 70, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#090909';
+    ctx.fillRect(-68, 10, 24, 40);
+    ctx.fillRect(44, 10, 24, 40);
+    const g = ctx.createLinearGradient(0, -50, 0, 38);
+    g.addColorStop(0, '#fff2b0');
+    g.addColorStop(0.16, '#ff5a36');
+    g.addColorStop(0.7, '#d81f1f');
+    g.addColorStop(1, '#7b0606');
+    ctx.fillStyle = g;
+    ctx.fillRect(-38, -28, 76, 62);
+    ctx.fillRect(-12, -52, 24, 22);
+    ctx.fillStyle = '#141414';
+    ctx.fillRect(-58, -4, 116, 8);
+    ctx.fillStyle = '#ff2d2d';
+    ctx.fillRect(-55, -10, 110, 6);
+    ctx.fillStyle = '#ffe14c';
+    ctx.beginPath();
+    ctx.arc(0, -39, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3acbff';
+    ctx.fillRect(-8, -35, 16, 8);
+    ctx.fillStyle = '#dff6ff';
+    ctx.fillRect(-18, -10, 36, 12);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(-8, 34, 16, 8);
+    ctx.fillStyle = '#ffba08';
+    ctx.fillRect(-5, 36, 10, 6);
+    ctx.restore();
+  }
+
+  return {
+    text,
+    drawSky,
+    drawPalm,
+    drawBillboard,
+    drawCrowd,
+    drawRaceCar,
+    drawPlayerCar
+  };
 })();
